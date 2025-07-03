@@ -58,3 +58,7 @@ web/.dart_tool/
 
 # Misc
 *.log
+
+# Firebase Admin Key
+*.json
+!assets/*.json
