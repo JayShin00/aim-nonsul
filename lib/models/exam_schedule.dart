@@ -25,4 +25,26 @@ class ExamSchedule {
       examTimestamp: (data['examTimestamp'] as Timestamp).toDate(),
     );
   }
+
+  // toMap() → SharedPreferences용
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'university': university,
+      'department': department,
+      'address': address,
+      'examTimestamp': examTimestamp.toIso8601String(),
+    };
+  }
+
+  // fromMap() → SharedPreferences에서 복원
+  factory ExamSchedule.fromMap(Map<String, dynamic> map) {
+    return ExamSchedule(
+      id: map['id'],
+      university: map['university'],
+      department: map['department'],
+      address: map['address'],
+      examTimestamp: DateTime.parse(map['examTimestamp']),
+    );
+  }
 }
