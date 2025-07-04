@@ -3,8 +3,6 @@ import 'package:aim_nonsul/models/exam_schedule.dart';
 import 'package:aim_nonsul/services/firestore_service.dart';
 import 'package:aim_nonsul/services/local_schedule_service.dart';
 import 'package:aim_nonsul/utils/conflict_util.dart';
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AddExamScreen extends StatefulWidget {
   const AddExamScreen({Key? key}) : super(key: key);
@@ -18,6 +16,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
   List<ExamSchedule> filteredSchedules = [];
   Map<String, List<ExamSchedule>> grouped = {};
   String searchQuery = "";
+  final LocalScheduleService _localService = LocalScheduleService();
 
   @override
   void initState() {
@@ -57,7 +56,19 @@ class _AddExamScreenState extends State<AddExamScreen> {
   }
 
   Future<void> onScheduleTap(ExamSchedule selected) async {
-    final existing = await loadSelectedSchedules();
+    final existing = await _localService.loadSelectedSchedules();
+
+    // 최대 6개 제한 확인
+    if (existing.length >= 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("❗ 최대 6개까지만 추가할 수 있습니다."),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     if (isDateConflict(existing, selected)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -69,18 +80,12 @@ class _AddExamScreenState extends State<AddExamScreen> {
       return;
     }
 
-    await saveSelectedSchedule(selected);
+    await _localService.saveSelectedSchedule(selected);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("✅ 저장 완료: ${selected.university} ${selected.department}"),
       ),
     );
-  }
-
-  Future<List<ExamSchedule>> loadSelectedSchedules() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = prefs.getStringList('selectedSchedules') ?? [];
-    return jsonList.map((e) => ExamSchedule.fromMap(jsonDecode(e))).toList();
   }
 
   @override

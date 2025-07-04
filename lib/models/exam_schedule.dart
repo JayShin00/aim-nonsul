@@ -44,7 +44,7 @@ class ExamSchedule {
       university: map['university'],
       department: map['department'],
       address: map['address'],
-      examDateTime: DateTime.parse(map['examDateTime']),
+      examDateTime: DateTime.parse(map['examTimestamp']),
     );
   }
 }
