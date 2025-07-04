@@ -5,14 +5,14 @@ class ExamSchedule {
   final String university;
   final String department;
   final String address;
-  final DateTime examTimestamp;
+  final DateTime examDateTime;
 
   ExamSchedule({
     required this.id,
     required this.university,
     required this.department,
     required this.address,
-    required this.examTimestamp,
+    required this.examDateTime,
   });
 
   factory ExamSchedule.fromFirestore(DocumentSnapshot doc) {
@@ -22,7 +22,7 @@ class ExamSchedule {
       university: data['university'],
       department: data['department'],
       address: data['address'],
-      examTimestamp: (data['examTimestamp'] as Timestamp).toDate(),
+      examDateTime: (data['examDateTime'] as Timestamp).toDate(),
     );
   }
 
@@ -33,7 +33,7 @@ class ExamSchedule {
       'university': university,
       'department': department,
       'address': address,
-      'examTimestamp': examTimestamp.toIso8601String(),
+      'examTimestamp': examDateTime.toIso8601String(),
     };
   }
 
@@ -44,7 +44,7 @@ class ExamSchedule {
       university: map['university'],
       department: map['department'],
       address: map['address'],
-      examTimestamp: DateTime.parse(map['examTimestamp']),
+      examDateTime: DateTime.parse(map['examDateTime']),
     );
   }
 }
