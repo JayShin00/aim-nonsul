@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:aim_nonsul/screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
+import 'package:home_widget/home_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Firebase 초기화 전에 필수
   await Firebase.initializeApp(); // Firebase 초기화
+
+  // Home Widget App Group ID 설정
+  await HomeWidget.setAppGroupId('group.com.aim.aimNonsul');
+
   runApp(const MyApp());
 }
 

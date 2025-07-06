@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:aim_nonsul/models/exam_schedule.dart';
 import 'package:aim_nonsul/screens/add_exam_screen.dart';
 import 'package:aim_nonsul/services/local_schedule_service.dart';
+import 'package:aim_nonsul/services/widget_service.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -28,6 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       selectedSchedules = list;
     });
+
+    // 위젯 업데이트
+    await WidgetService.updateWidget(list);
   }
 
   Future<void> removeSelectedSchedule(int index) async {
