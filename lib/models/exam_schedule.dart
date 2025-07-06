@@ -6,6 +6,7 @@ class ExamSchedule {
   final String department;
   final String address;
   final DateTime examDateTime;
+  final bool isPrimary;
 
   ExamSchedule({
     required this.id,
@@ -13,6 +14,7 @@ class ExamSchedule {
     required this.department,
     required this.address,
     required this.examDateTime,
+    this.isPrimary = false,
   });
 
   factory ExamSchedule.fromFirestore(DocumentSnapshot doc) {
@@ -23,6 +25,7 @@ class ExamSchedule {
       department: data['department'],
       address: data['address'],
       examDateTime: (data['examDateTime'] as Timestamp).toDate(),
+      isPrimary: data['isPrimary'] ?? false,
     );
   }
 
@@ -34,6 +37,7 @@ class ExamSchedule {
       'department': department,
       'address': address,
       'examTimestamp': examDateTime.toIso8601String(),
+      'isPrimary': isPrimary,
     };
   }
 
@@ -45,6 +49,7 @@ class ExamSchedule {
       department: map['department'],
       address: map['address'],
       examDateTime: DateTime.parse(map['examTimestamp']),
+      isPrimary: map['isPrimary'] ?? false,
     );
   }
 }

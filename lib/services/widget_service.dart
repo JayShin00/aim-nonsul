@@ -17,22 +17,37 @@ class WidgetService {
         daysLeft: '',
       );
     } else {
-      // 다음 시험 찾기
-      final nextExam = _findNextExam(examList);
+      // 대표 모집단위가 있는지 확인
+      final primaryExam = examList.firstWhere(
+        (exam) => exam.isPrimary && exam.examDateTime.isAfter(DateTime.now()),
+        orElse: () => null as ExamSchedule,
+      );
 
-      if (nextExam != null) {
+      ExamSchedule? targetExam;
+      if (primaryExam != null) {
+        // 대표 모집단위가 있고 아직 시험이 끝나지 않은 경우
+        targetExam = primaryExam;
+      } else {
+        // 대표 모집단위가 없거나 이미 끝난 경우, 다음 시험 찾기
+        targetExam = _findNextExam(examList);
+      }
+
+      if (targetExam != null) {
         final dateFormat = DateFormat('yyyy-MM-dd');
         final timeFormat = DateFormat('HH:mm');
 
-        final examDate = dateFormat.format(nextExam.examDateTime);
-        final examTime = timeFormat.format(nextExam.examDateTime);
-        final daysLeft = _calculateDaysLeft(nextExam.examDateTime);
+        final examDate = dateFormat.format(targetExam.examDateTime);
+        final examTime = timeFormat.format(targetExam.examDateTime);
+        final daysLeft = _calculateDaysLeft(targetExam.examDateTime);
 
         await _updateWidgetData(
-          examTitle: nextExam.department,
+          examTitle:
+              targetExam.isPrimary
+                  ? '⭐ ${targetExam.department}'
+                  : targetExam.department,
           examDate: examDate,
           examTime: examTime,
-          examRoom: nextExam.address,
+          examRoom: targetExam.address,
           daysLeft: daysLeft,
         );
       } else {

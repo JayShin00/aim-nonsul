@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:aim_nonsul/screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:aim_nonsul/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Firebase 초기화 전에 필수
@@ -14,11 +15,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Nonsul D-Day',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const HomeScreen(), // 👈 여기 수정
+      title: 'AIM 논술 D-Day',
+      theme: AppTheme.lightTheme,
+      debugShowCheckedModeBanner: false,
+      home: const HomeScreen(),
     );
   }
 }

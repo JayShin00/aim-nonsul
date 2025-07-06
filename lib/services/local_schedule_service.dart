@@ -50,4 +50,59 @@ class LocalScheduleService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_selectedSchedulesKey);
   }
+
+  // 대표 모집단위 설정하기 (기존 대표는 해제)
+  Future<void> setPrimarySchedule(int targetId) async {
+    final existing = await loadSelectedSchedules();
+
+    // 모든 isPrimary를 false로 설정
+    for (int i = 0; i < existing.length; i++) {
+      final schedule = existing[i];
+      existing[i] = ExamSchedule(
+        id: schedule.id,
+        university: schedule.university,
+        department: schedule.department,
+        address: schedule.address,
+        examDateTime: schedule.examDateTime,
+        isPrimary: schedule.id == targetId, // 해당 ID만 true로 설정
+      );
+    }
+
+    // 업데이트된 목록 저장
+    await saveAllSelectedSchedules(existing);
+  }
+
+  // 대표 모집단위 해제하기
+  Future<void> unsetPrimarySchedule(int targetId) async {
+    final existing = await loadSelectedSchedules();
+
+    // 해당 ID의 isPrimary를 false로 설정
+    for (int i = 0; i < existing.length; i++) {
+      final schedule = existing[i];
+      if (schedule.id == targetId) {
+        existing[i] = ExamSchedule(
+          id: schedule.id,
+          university: schedule.university,
+          department: schedule.department,
+          address: schedule.address,
+          examDateTime: schedule.examDateTime,
+          isPrimary: false,
+        );
+        break;
+      }
+    }
+
+    // 업데이트된 목록 저장
+    await saveAllSelectedSchedules(existing);
+  }
+
+  // 현재 대표 모집단위 가져오기
+  Future<ExamSchedule?> getPrimarySchedule() async {
+    final schedules = await loadSelectedSchedules();
+    try {
+      return schedules.firstWhere((schedule) => schedule.isPrimary);
+    } catch (e) {
+      return null; // 대표 모집단위가 없는 경우
+    }
+  }
 }
