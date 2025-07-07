@@ -83,7 +83,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
     await _localService.saveSelectedSchedule(selected);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("✅ 저장 완료: ${selected.university} ${selected.department}"),
+        content: Text("${selected.university} ${selected.department} 추가 완료!"),
       ),
     );
   }

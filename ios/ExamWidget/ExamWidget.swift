@@ -19,12 +19,12 @@ struct ExamInfo {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let examDay = calendar.startOfDay(for: examDate)
-        let difference = calendar.dateComponents([.day], from: today, to: examDay).day ?? 0
+        let daysBetween = calendar.dateComponents([.day], from: today, to: examDay).day ?? 0
         
-        if difference == 0 {
+        if daysBetween == 0 {
             return "D-Day"
-        } else if difference > 0 {
-            return "D-\(difference)"
+        } else if daysBetween > 0 {
+            return "D-\(daysBetween)"
         } else {
             return "종료"
         }
@@ -34,19 +34,19 @@ struct ExamInfo {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let examDay = calendar.startOfDay(for: examDate)
-        let difference = calendar.dateComponents([.day], from: today, to: examDay).day ?? 0
+        let daysBetween = calendar.dateComponents([.day], from: today, to: examDay).day ?? 0
         
-        if difference == 0 {
-            return Color(red: 0.86, green: 0.21, blue: 0.27) // errorColor
-        } else if difference < 0 {
-            return Color(red: 0.56, green: 0.60, blue: 0.69) // textLight
-        } else if difference <= 7 {
-            return Color(red: 0.86, green: 0.21, blue: 0.27) // errorColor
-        } else if difference <= 30 {
-            return Color(red: 1.0, green: 0.76, blue: 0.03) // warningColor
+        if daysBetween <= 0 {
+            return Color.gray
         } else {
-            return Color(red: 0.84, green: 0.20, blue: 0.52) // primaryColor
+            return Color(red: 0.84, green: 0.20, blue: 0.52) // AIM 핑크
         }
+    }
+    
+    var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy.MM.dd"
+        return formatter.string(from: examDate)
     }
 }
 
@@ -54,7 +54,7 @@ struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
         let sampleExam = ExamInfo(
             university: "서울대학교",
-            department: "인문대학 국어국문학과",
+            department: "컴퓨터공학과",
             examDate: Calendar.current.date(byAdding: .day, value: 15, to: Date()) ?? Date(),
             isPrimary: true
         )
@@ -94,7 +94,6 @@ struct Provider: TimelineProvider {
            let examUniversity = userDefaults?.string(forKey: "exam_university"),
            let examDate = userDefaults?.string(forKey: "exam_date"),
            let examTime = userDefaults?.string(forKey: "exam_time"),
-
            !examTitle.isEmpty,
            !examDate.isEmpty {
             
@@ -122,12 +121,12 @@ struct Provider: TimelineProvider {
                 let cleanTitle = examTitle.replacingOccurrences(of: "⭐ ", with: "")
                 let isPrimary = examTitle.contains("⭐")
                 
-                                 return ExamInfo(
-                     university: examUniversity,
-                     department: cleanTitle,
-                     examDate: examDateTime,
-                     isPrimary: isPrimary
-                 )
+                return ExamInfo(
+                    university: examUniversity,
+                    department: cleanTitle,
+                    examDate: examDateTime,
+                    isPrimary: isPrimary
+                )
             }
         }
         
@@ -143,6 +142,7 @@ struct SimpleEntry: TimelineEntry {
 
 struct ExamWidgetEntryView : View {
     var entry: Provider.Entry
+    @Environment(\.widgetFamily) var family
     
     // AIM 테마 색상
     private let primaryColor = Color(red: 0.84, green: 0.20, blue: 0.52) // #D63384
@@ -152,67 +152,134 @@ struct ExamWidgetEntryView : View {
     
     var body: some View {
         if let examInfo = entry.examInfo {
-            VStack(alignment: .leading, spacing: 0) {                
-                // 대학명
+            switch family {
+            case .systemSmall:
+                smallWidgetView(examInfo: examInfo)
+            case .systemMedium:
+                mediumWidgetView(examInfo: examInfo)
+            default:
+                smallWidgetView(examInfo: examInfo)
+            }
+        } else {
+            emptyStateView()
+        }
+    }
+    
+    // 작은 위젯 (systemSmall)
+    private func smallWidgetView(examInfo: ExamInfo) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // D-Day (왼쪽 상단, 가장 강조)
+            HStack {
+                Text(examInfo.dDayText)
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundColor(examInfo.dDayColor)
+                Spacer()
+                if examInfo.isPrimary {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color.yellow)
+                }
+            }
+            .padding(.bottom, 8)
+            
+            Spacer()
+            
+            // 학교명
+            Text(examInfo.university)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            
+            // 학과명
+            Text(examInfo.department)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(textSecondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .padding(.bottom, 4)
+            
+            // 시험일
+            Text(examInfo.formattedDate)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(textSecondary)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(backgroundColor)
+    }
+    
+    // 넓은 위젯 (systemMedium)
+    private func mediumWidgetView(examInfo: ExamInfo) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // D-Day (왼쪽 상단, 가장 강조)
+            HStack {
+                Text(examInfo.dDayText)
+                    .font(.system(size: 32, weight: .black, design: .rounded))
+                    .foregroundColor(examInfo.dDayColor)
+                
+                Spacer()
+                
+                if examInfo.isPrimary {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.yellow)
+                }
+            }
+            .padding(.bottom, 12)
+            
+            Spacer()
+            
+            // 학교, 학과 (한 줄에 배치)
+            HStack {
                 Text(examInfo.university)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(textPrimary)
+                    .lineLimit(1)
+                
+                Text("·")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(textSecondary)
+                
+                Text(examInfo.department)
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundColor(textSecondary)
                     .lineLimit(1)
                 
-                // 학과명
-                Text(examInfo.department)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(textPrimary)
-                    .lineLimit(2)
-                    .padding(.bottom, 8)
-                
-                // 시험일자와 D-Day
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("시험일")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(textSecondary)
-                        
-                        Text(examInfo.examDate, style: .date)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(textPrimary)
-                    }
-                    
-                    Spacer()
-                    
-                    // D-Day 뱃지
-                    Text(examInfo.dDayText)
-                        .font(.system(size: 16, weight: .black))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(examInfo.dDayColor)
-                        .cornerRadius(12)
-                }
+                Spacer()
             }
-            .padding(16)
-            .background(backgroundColor)
-            .cornerRadius(16)
-        } else {
-            // 데이터가 없을 때
-            VStack(spacing: 8) {
-                Image(systemName: "calendar.badge.exclamationmark")
-                    .font(.system(size: 24))
-                    .foregroundColor(primaryColor)
-                
-                Text("AIM 논술")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(primaryColor)
-                
-                Text("모집단위를 추가해주세요")
-                    .font(.system(size: 12))
-                    .foregroundColor(textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(16)
-            .background(backgroundColor)
-            .cornerRadius(16)
+            .minimumScaleFactor(0.8)
+            
+            // 시험일
+            Text(examInfo.formattedDate)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(textSecondary)
+                .padding(.top, 4)
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(backgroundColor)
+    }
+    
+    // 빈 상태
+    private func emptyStateView() -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.system(size: 24))
+                .foregroundColor(primaryColor)
+            
+            Text("AIM 논술")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(primaryColor)
+            
+            Text("모집단위를 추가해주세요")
+                .font(.system(size: 12))
+                .foregroundColor(textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(backgroundColor)
     }
 }
 
@@ -239,6 +306,19 @@ struct ExamWidget: Widget {
 
 @available(iOS 17.0, *)
 #Preview(as: .systemSmall) {
+    ExamWidget()
+} timeline: {
+    let sampleExam = ExamInfo(
+        university: "서울대학교",
+        department: "인문대학 국어국문학과",
+        examDate: Calendar.current.date(byAdding: .day, value: 15, to: Date()) ?? Date(),
+        isPrimary: true
+    )
+    SimpleEntry(date: .now, examInfo: sampleExam)
+}
+
+@available(iOS 17.0, *)
+#Preview(as: .systemMedium) {
     ExamWidget()
 } timeline: {
     let sampleExam = ExamInfo(
