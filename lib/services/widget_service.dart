@@ -13,10 +13,14 @@ class WidgetService {
       await _clearWidgetData();
     } else {
       // 대표 모집단위가 있는지 확인
-      final primaryExam = examList.firstWhere(
-        (exam) => exam.isPrimary && exam.examDateTime.isAfter(DateTime.now()),
-        orElse: () => null as ExamSchedule,
-      );
+      ExamSchedule? primaryExam;
+      try {
+        primaryExam = examList.firstWhere(
+          (exam) => exam.isPrimary && exam.examDateTime.isAfter(DateTime.now()),
+        );
+      } catch (e) {
+        primaryExam = null;
+      }
 
       ExamSchedule? targetExam;
       if (primaryExam != null) {
@@ -43,7 +47,7 @@ class WidgetService {
       final examData = {
         'university': exam.university,
         'department': exam.department,
-        'examTimestamp': exam.examDateTime.toIso8601String(),
+        'examDateTime': exam.examDateTime.toIso8601String(),
         'isPrimary': exam.isPrimary,
         'address': exam.address,
       };
@@ -77,7 +81,7 @@ class WidgetService {
       // 위젯 업데이트 트리거
       await HomeWidget.updateWidget(
         name: _widgetName,
-        androidName: 'ExamWidgetProvider',
+        androidName: 'ExamWidget',
         iOSName: 'ExamWidget',
       );
 
@@ -101,7 +105,7 @@ class WidgetService {
       // 위젯 업데이트 트리거
       await HomeWidget.updateWidget(
         name: _widgetName,
-        androidName: 'ExamWidgetProvider',
+        androidName: 'ExamWidget',
         iOSName: 'ExamWidget',
       );
     } catch (e) {

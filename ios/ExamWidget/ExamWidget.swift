@@ -152,23 +152,7 @@ struct ExamWidgetEntryView : View {
     
     var body: some View {
         if let examInfo = entry.examInfo {
-            VStack(alignment: .leading, spacing: 0) {
-                // 헤더
-                HStack {
-                    Text("AIM 논술")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(primaryColor)
-                    
-                    Spacer()
-                    
-                    if examInfo.isPrimary {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
-                    }
-                }
-                .padding(.bottom, 8)
-                
+            VStack(alignment: .leading, spacing: 0) {                
                 // 대학명
                 Text(examInfo.university)
                     .font(.system(size: 12, weight: .medium))

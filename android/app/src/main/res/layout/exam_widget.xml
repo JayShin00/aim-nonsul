@@ -1,73 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/widget_background_gradient"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="@drawable/widget_background">
+    android:padding="16dp">
 
-    <TextView
-        android:id="@+id/exam_title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="다음 시험"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="#333333"
-        android:gravity="center"
-        android:layout_marginBottom="8dp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="4dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="날짜"
-            android:textSize="14sp"
-            android:textColor="#666666" />
-
-        <TextView
-            android:id="@+id/exam_date"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="2"
-            android:text="날짜 없음"
-            android:textSize="14sp"
-            android:textColor="#333333" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="4dp">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="시간"
-            android:textSize="14sp"
-            android:textColor="#666666" />
-
-        <TextView
-            android:id="@+id/exam_time"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="2"
-            android:text="시간 없음"
-            android:textSize="14sp"
-            android:textColor="#333333" />
-
-    </LinearLayout>
-
+    <!-- 헤더 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -78,29 +17,130 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="장소"
+            android:text="AIM 논술"
+            android:textColor="#D63384"
             android:textSize="14sp"
-            android:textColor="#666666" />
+            android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/exam_room"
-            android:layout_width="0dp"
+            android:id="@+id/star_indicator"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
-            android:text="장소 없음"
-            android:textSize="14sp"
-            android:textColor="#333333" />
+            android:text="⭐"
+            android:textColor="#FFC107"
+            android:textSize="10sp"
+            android:visibility="gone" />
 
     </LinearLayout>
 
+    <!-- 대학명 -->
     <TextView
-        android:id="@+id/days_left"
+        android:id="@+id/university_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="D-Day"
-        android:textSize="20sp"
+        android:text="대학명"
+        android:textColor="#6C757D"
+        android:textSize="12sp"
+        android:textStyle="normal"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <!-- 학과명 -->
+    <TextView
+        android:id="@+id/department_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="학과명"
+        android:textColor="#2C3E50"
+        android:textSize="14sp"
         android:textStyle="bold"
-        android:textColor="#FF5722"
-        android:gravity="center" />
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:layout_marginBottom="8dp" />
+
+    <!-- 하단 영역 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- 시험일 정보 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="시험일"
+                android:textColor="#6C757D"
+                android:textSize="10sp"
+                android:textStyle="normal" />
+
+            <TextView
+                android:id="@+id/exam_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2024.12.07"
+                android:textColor="#2C3E50"
+                android:textSize="12sp"
+                android:textStyle="normal"
+                android:layout_marginTop="2dp" />
+
+        </LinearLayout>
+
+        <!-- D-Day 뱃지 -->
+        <TextView
+            android:id="@+id/dday_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="D-15"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="@drawable/dday_badge_primary"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp" />
+
+    </LinearLayout>
+
+    <!-- 빈 상태 레이아웃 -->
+    <LinearLayout
+        android:id="@+id/empty_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📅"
+            android:textSize="24sp"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AIM 논술"
+            android:textColor="#D63384"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="모집단위를 추가해주세요"
+            android:textColor="#6C757D"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:textAlignment="center" />
+
+    </LinearLayout>
 
 </LinearLayout> 

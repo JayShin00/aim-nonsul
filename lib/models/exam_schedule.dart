@@ -36,7 +36,7 @@ class ExamSchedule {
       'university': university,
       'department': department,
       'address': address,
-      'examTimestamp': examDateTime.toIso8601String(),
+      'examDateTime': examDateTime.toIso8601String(),
       'isPrimary': isPrimary,
     };
   }
@@ -48,7 +48,7 @@ class ExamSchedule {
       university: map['university'],
       department: map['department'],
       address: map['address'],
-      examDateTime: DateTime.parse(map['examTimestamp']),
+      examDateTime: DateTime.parse(map['examDateTime']),
       isPrimary: map['isPrimary'] ?? false,
     );
   }

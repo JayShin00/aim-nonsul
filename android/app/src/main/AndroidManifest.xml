@@ -27,7 +27,7 @@
         </activity>
         
         <!-- 시험 위젯 등록 -->
-        <receiver android:name=".ExamWidgetProvider"
+        <receiver android:name=".ExamWidget"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
