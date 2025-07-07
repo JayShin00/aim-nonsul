@@ -157,6 +157,12 @@ struct ExamWidgetEntryView : View {
                 smallWidgetView(examInfo: examInfo)
             case .systemMedium:
                 mediumWidgetView(examInfo: examInfo)
+            case .accessoryCircular:
+                accessoryCircularView(examInfo: examInfo)
+            case .accessoryRectangular:
+                accessoryRectangularView(examInfo: examInfo)
+            case .accessoryInline:
+                accessoryInlineView(examInfo: examInfo)
             default:
                 smallWidgetView(examInfo: examInfo)
             }
@@ -165,6 +171,38 @@ struct ExamWidgetEntryView : View {
         }
     }
     
+
+@ViewBuilder
+private func accessoryCircularView(examInfo: ExamInfo) -> some View {
+    ZStack {
+        Circle()
+            .stroke(examInfo.dDayColor, lineWidth: 2)
+        Text(examInfo.dDayText.replacingOccurrences(of: "D-", with: ""))
+            .font(.caption2)
+            .foregroundColor(examInfo.dDayColor)
+    }
+}
+
+@ViewBuilder
+private func accessoryRectangularView(examInfo: ExamInfo) -> some View {
+    VStack(alignment: .leading) {
+        Text("D-Day")
+            .font(.caption2)
+            .foregroundColor(textSecondary)
+        Text(examInfo.dDayText)
+            .font(.headline)
+            .bold()
+            .foregroundColor(examInfo.dDayColor)
+    }
+}
+
+@ViewBuilder
+private func accessoryInlineView(examInfo: ExamInfo) -> some View {
+    Text("논술까지 \(examInfo.dDayText)")
+        .font(.caption2)
+        .foregroundColor(examInfo.dDayColor)
+}
+
     // 작은 위젯 (systemSmall)
     private func smallWidgetView(examInfo: ExamInfo) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -300,7 +338,8 @@ struct ExamWidget: Widget {
         .contentMarginsDisabled()
         .configurationDisplayName("AIM 논술 D-Day")
         .description("대표 모집단위의 시험 일정과 D-Day를 확인하세요.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular,
+  .accessoryRectangular, .accessoryInline])
     }
 }
 
