@@ -96,21 +96,23 @@ class _AddExamScreenState extends State<AddExamScreen> {
         children: [
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
               child: Row(
                 children: [
                   IconButton(
                     icon: const Icon(
                       Icons.close,
-                      size: 20,
+                      size: 26,
                       color: AppTheme.textPrimary,
                     ),
                     onPressed: () => Navigator.of(context).pop(),
+
                     style: IconButton.styleFrom(
-                      backgroundColor: AppTheme.surfaceColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size(36, 36),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -127,7 +129,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
             ),
           ),
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),

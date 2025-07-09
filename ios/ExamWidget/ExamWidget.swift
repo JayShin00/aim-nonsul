@@ -177,23 +177,29 @@ private func accessoryCircularView(examInfo: ExamInfo) -> some View {
     ZStack {
         Circle()
             .stroke(examInfo.dDayColor, lineWidth: 2)
-        Text(examInfo.dDayText.replacingOccurrences(of: "D-", with: ""))
-            .font(.caption2)
+        
+        Text(examInfo.dDayText) // 예: "D-99"
+            .font(.system(size: 16, weight: .bold, design: .rounded))
             .foregroundColor(examInfo.dDayColor)
     }
 }
 
 @ViewBuilder
 private func accessoryRectangularView(examInfo: ExamInfo) -> some View {
-    VStack(alignment: .leading) {
-        Text("D-Day")
+    VStack(alignment: .leading, spacing: 2) {
+        // 학교 + 학과 한 줄에
+        Text("\(examInfo.university) \(examInfo.department)")
             .font(.caption2)
             .foregroundColor(textSecondary)
+            .lineLimit(1)
+        
+        // D-Day 강조
         Text(examInfo.dDayText)
-            .font(.headline)
-            .bold()
+            .font(.system(size: 22, weight: .heavy, design: .rounded)) // ← 더 큼 + 굵게
             .foregroundColor(examInfo.dDayColor)
+            .padding(.top, 2)
     }
+    .frame(maxWidth: .infinity, alignment: .leading) // ← 왼쪽 정렬
 }
 
 @ViewBuilder
@@ -209,7 +215,7 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
             // D-Day (왼쪽 상단, 가장 강조)
             HStack {
                 Text(examInfo.dDayText)
-                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .font(.system(size: 30, weight: .black, design: .rounded))
                     .foregroundColor(examInfo.dDayColor)
                 Spacer()
                 if examInfo.isPrimary {
@@ -224,14 +230,14 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
             
             // 학교명
             Text(examInfo.university)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             
             // 학과명
             Text(examInfo.department)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundColor(textSecondary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
@@ -239,7 +245,7 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
             
             // 시험일
             Text(examInfo.formattedDate)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundColor(textSecondary)
         }
         .padding(12)
@@ -260,7 +266,7 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                 
                 if examInfo.isPrimary {
                     Image(systemName: "star.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: 16))
                         .foregroundColor(Color.yellow)
                 }
             }
@@ -269,18 +275,18 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
             Spacer()
             
             // 학교, 학과 (한 줄에 배치)
-            HStack {
+            HStack(spacing: 0) {
                 Text(examInfo.university)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(textPrimary)
                     .lineLimit(1)
                 
                 Text("·")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(textSecondary)
                 
                 Text(examInfo.department)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 16, weight: .medium))
                     .foregroundColor(textSecondary)
                     .lineLimit(1)
                 
@@ -290,7 +296,7 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
             
             // 시험일
             Text(examInfo.formattedDate)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 14, weight: .bold))
                 .foregroundColor(textSecondary)
                 .padding(.top, 4)
         }
