@@ -16,9 +16,21 @@ class AddExamScreen extends StatefulWidget {
 class _AddExamScreenState extends State<AddExamScreen> {
   List<ExamSchedule> allSchedules = [];
   List<ExamSchedule> filteredSchedules = [];
-  Map<String, List<ExamSchedule>> grouped = {};
   String searchQuery = "";
   final LocalScheduleService _localService = LocalScheduleService();
+  Map<String, bool> expandedDates = {};
+
+  Map<String, List<ExamSchedule>> get groupedSchedules {
+    final grouped = <String, List<ExamSchedule>>{};
+    for (final schedule in filteredSchedules) {
+      final dateKey = _formatDateTime(schedule.examDateTime);
+      if (!grouped.containsKey(dateKey)) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey]!.add(schedule);
+    }
+    return grouped;
+  }
 
   @override
   void initState() {
@@ -26,20 +38,26 @@ class _AddExamScreenState extends State<AddExamScreen> {
     loadSchedules();
   }
 
+  void _expandAllDates() {
+    setState(() {
+      for (final dateKey in groupedSchedules.keys) {
+        expandedDates[dateKey] = true;
+      }
+    });
+  }
+
   Future<void> loadSchedules() async {
     final data = await FirestoreService().fetchAllSchedules();
     setState(() {
       allSchedules = data;
       filteredSchedules = data;
-      groupByUniversity();
+      sortByDate();
+      _expandAllDates();
     });
   }
 
-  void groupByUniversity() {
-    grouped.clear();
-    for (final item in filteredSchedules) {
-      grouped.putIfAbsent(item.university, () => []).add(item);
-    }
+  void sortByDate() {
+    filteredSchedules.sort((a, b) => a.examDateTime.compareTo(b.examDateTime));
   }
 
   void onSearchChanged(String query) {
@@ -53,7 +71,8 @@ class _AddExamScreenState extends State<AddExamScreen> {
                     s.department.toLowerCase().contains(searchQuery),
               )
               .toList();
-      groupByUniversity();
+      sortByDate();
+      _expandAllDates();
     });
   }
 
@@ -154,7 +173,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
           ),
           Expanded(
             child:
-                grouped.isEmpty
+                filteredSchedules.isEmpty
                     ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -185,88 +204,163 @@ class _AddExamScreenState extends State<AddExamScreen> {
                     )
                     : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: grouped.entries.length,
+                      itemCount: groupedSchedules.length,
                       itemBuilder: (context, index) {
-                        final entry = grouped.entries.elementAt(index);
+                        final dateKey = groupedSchedules.keys.elementAt(index);
+                        final schedules = groupedSchedules[dateKey]!;
+                        final isExpanded = expandedDates[dateKey] ?? false;
+
                         return Container(
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-                            gradient: AppTheme.cardGradient,
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: AppTheme.cardShadow,
                           ),
-                          child: ExpansionTile(
-                            title: Text(
-                              entry.key,
-                              style: AppTheme.headingSmall,
-                            ),
-                            iconColor: AppTheme.primaryColor,
-                            collapsedIconColor: AppTheme.textSecondary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            collapsedShape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            children:
-                                entry.value.map((schedule) {
-                                  return Container(
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.surfaceColor,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: ListTile(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 8,
-                                          ),
-                                      title: Text(
-                                        schedule.department,
-                                        style: AppTheme.bodyLarge,
-                                      ),
-                                      subtitle: Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.calendar_today,
-                                              size: 16,
-                                              color: AppTheme.textSecondary,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              "시험일: ${_formatDateTime(schedule.examDateTime)}",
-                                              style: AppTheme.bodyMedium,
-                                            ),
-                                          ],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    expandedDates[dateKey] = !isExpanded;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        _formatDateKorean(dateKey),
+                                        style: AppTheme.bodyLarge.copyWith(
+                                          color: AppTheme.textSecondary,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                      trailing: Container(
-                                        padding: const EdgeInsets.all(8),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.primaryColor
+                                                  .withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              '${schedules.length}',
+                                              style: AppTheme.bodyMedium
+                                                  .copyWith(
+                                                    color:
+                                                        AppTheme.primaryColor,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Icon(
+                                            isExpanded
+                                                ? Icons.expand_less
+                                                : Icons.expand_more,
+                                            color: AppTheme.textSecondary,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if (isExpanded)
+                                ...schedules
+                                    .map(
+                                      (schedule) => Container(
+                                        margin: const EdgeInsets.fromLTRB(
+                                          16,
+                                          0,
+                                          16,
+                                          12,
+                                        ),
                                         decoration: BoxDecoration(
-                                          gradient: AppTheme.primaryGradient,
+                                          gradient: AppTheme.cardGradient,
                                           borderRadius: BorderRadius.circular(
-                                            8,
+                                            12,
                                           ),
+                                          boxShadow: AppTheme.lightShadow,
                                         ),
-                                        child: const Icon(
-                                          Icons.add,
-                                          color: Colors.white,
-                                          size: 20,
+                                        child: ListTile(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 12,
+                                              ),
+                                          title: Text(
+                                            "${schedule.university} ${schedule.department}",
+                                            style: AppTheme.bodyLarge.copyWith(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppTheme.textPrimary,
+                                            ),
+                                          ),
+                                          subtitle: Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 4,
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.access_time,
+                                                  size: 15,
+                                                  color: AppTheme.textSecondary,
+                                                ),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  _formatTimeKorean(
+                                                    schedule.examDateTime,
+                                                  ),
+                                                  style: AppTheme.bodyLarge
+                                                      .copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            AppTheme
+                                                                .textSecondary,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          trailing: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              gradient:
+                                                  AppTheme.primaryGradient,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.add,
+                                              color: Colors.white,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          onTap: () => onScheduleTap(schedule),
                                         ),
                                       ),
-                                      onTap: () => onScheduleTap(schedule),
-                                    ),
-                                  );
-                                }).toList(),
+                                    )
+                                    .toList(),
+                              if (isExpanded) const SizedBox(height: 4),
+                            ],
                           ),
                         );
                       },
@@ -279,5 +373,25 @@ class _AddExamScreenState extends State<AddExamScreen> {
 
   String _formatDateTime(DateTime dateTime) {
     return "${dateTime.year}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.day.toString().padLeft(2, '0')}";
+  }
+
+  String _formatTime(DateTime dateTime) {
+    return "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+  }
+
+  String _formatDateKorean(String dateString) {
+    final parts = dateString.split('.');
+    final month = int.parse(parts[1]);
+    final day = int.parse(parts[2]);
+    return '${month}월 ${day}일';
+  }
+
+  String _formatTimeKorean(DateTime dateTime) {
+    final hour = dateTime.hour;
+    final minute = dateTime.minute;
+    final period = hour < 12 ? '오전' : '오후';
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    final minuteStr = minute == 0 ? '' : ' ${minute}분';
+    return '$period ${displayHour}시$minuteStr';
   }
 }

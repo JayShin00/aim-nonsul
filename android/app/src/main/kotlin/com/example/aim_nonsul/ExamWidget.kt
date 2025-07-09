@@ -11,6 +11,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.util.Log
 import android.view.View
+import android.graphics.Color
+import java.util.concurrent.TimeUnit
 
 class ExamWidget : AppWidgetProvider() {
 
@@ -64,8 +66,15 @@ class ExamWidget : AppWidgetProvider() {
                     val schedulesArray = JSONArray(selectedSchedulesJson)
                     
                     if (schedulesArray.length() > 0) {
-                        // 첫 번째 일정을 주요 일정으로 사용
-                        val schedule = schedulesArray.getJSONObject(0)
+                        // isPrimary가 true인 일정을 우선 선택, 없으면 첫 번째 일정 사용
+                        var schedule = schedulesArray.getJSONObject(0)
+                        for (i in 0 until schedulesArray.length()) {
+                            val currentSchedule = schedulesArray.getJSONObject(i)
+                            if (currentSchedule.optBoolean("isPrimary", false)) {
+                                schedule = currentSchedule
+                                break
+                            }
+                        }
                         
                         val university = schedule.optString("university", "")
                         val department = schedule.optString("department", "")
@@ -77,7 +86,7 @@ class ExamWidget : AppWidgetProvider() {
                         if (university.isNotEmpty() && department.isNotEmpty() && examDateTimeStr.isNotEmpty()) {
                             // D-Day 계산
                             val dDay = calculateDDay(examDateTimeStr)
-                            val dDayText = if (dDay == 0) "D-Day" else if (dDay > 0) "D+$dDay" else "D$dDay"
+                            val dDayText = if (dDay == 0) "D-Day" else if (dDay < 0) "종료" else "D-$dDay"
                             
                             Log.d("ExamWidget", "D-Day 계산 결과: $dDayText")
                             
@@ -98,8 +107,9 @@ class ExamWidget : AppWidgetProvider() {
                             // D-Day 뱃지
                             views.setTextViewText(R.id.dday_badge, dDayText)
                             
-                            // D-Day에 따른 색상 설정 (iOS와 동일하게 모두 핑크색 사용)
-                            views.setInt(R.id.dday_badge, "setBackgroundResource", R.drawable.dday_badge_primary)
+                            // D-Day에 따른 색상 설정 (iOS와 동일하게)
+                            val dDayColor = if (dDay <= 0) "#6C757D" else "#D63384"
+                            views.setInt(R.id.dday_badge, "setTextColor", android.graphics.Color.parseColor(dDayColor))
                             
                         } else {
                             Log.d("ExamWidget", "필수 데이터가 누락됨")
@@ -137,8 +147,7 @@ class ExamWidget : AppWidgetProvider() {
         private fun calculateDDay(examDateTimeStr: String): Int {
             return try {
                 // ISO 8601 형식 파싱 (Flutter의 toIso8601String() 출력)
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-                dateFormat.timeZone = TimeZone.getTimeZone("UTC")
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.getDefault())
                 val examDate = dateFormat.parse(examDateTimeStr)
                 
                 val currentDate = Calendar.getInstance().apply {
@@ -169,8 +178,7 @@ class ExamWidget : AppWidgetProvider() {
         
         private fun formatExamDate(examDateTimeStr: String): String {
             return try {
-                val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-                inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+                val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.getDefault())
                 val outputFormat = SimpleDateFormat("yyyy.MM.dd", Locale.getDefault())
                 val date = inputFormat.parse(examDateTimeStr)
                 outputFormat.format(date)
