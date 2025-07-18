@@ -1,6 +1,5 @@
 import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
+from firebase_admin import credentials, firestore
 import pandas as pd
 from datetime import datetime
 
@@ -14,7 +13,6 @@ COLLECTION_NAME = 'examSchedules'
 # Firebase Admin SDK 초기화
 cred = credentials.Certificate(SERVICE_ACCOUNT_KEY_PATH)
 firebase_admin.initialize_app(cred)
-
 db = firestore.client()
 
 def upload_csv_to_firestore(csv_file, collection_name):
@@ -22,8 +20,8 @@ def upload_csv_to_firestore(csv_file, collection_name):
         df = pd.read_csv(csv_file)
         for index, row in df.iterrows():
             # 날짜+시간 결합 → datetime 변환
-            date_str = row['examDate']  # e.g. "2025-11-08"
-            time_str = row['examTime']  # e.g. "13:00"
+            date_str = row['examDate']  # 예: 2025-11-22
+            time_str = row['examTime']  # 예: 09:00
             combined_str = f"{date_str} {time_str}"
             exam_datetime = datetime.strptime(combined_str, "%Y-%m-%d %H:%M")
 
@@ -31,6 +29,7 @@ def upload_csv_to_firestore(csv_file, collection_name):
             data = {
                 "id": int(row["id"]),
                 "university": row["university"],
+                "category": row["category"],
                 "department": row["department"],
                 "address": row["address"],
                 "examDateTime": exam_datetime,
@@ -40,9 +39,9 @@ def upload_csv_to_firestore(csv_file, collection_name):
             doc_ref.set(data)
             print(f"Document {doc_ref.id} added.")
 
-        print(f"Data from {csv_file} successfully uploaded to Firestore collection: {collection_name}")
+        print(f"!! Data from {csv_file} successfully uploaded to Firestore collection: {collection_name}")
     except Exception as e:
-        print(f"Error uploading data: {e}")
+        print(f"!! Error uploading data: {e}")
 
 if __name__ == "__main__":
     upload_csv_to_firestore(CSV_FILE_PATH, COLLECTION_NAME)
