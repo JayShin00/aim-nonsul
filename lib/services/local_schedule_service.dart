@@ -21,8 +21,16 @@ class LocalScheduleService {
     final existing = await loadSelectedSchedules();
     existing.add(schedule);
 
-    // 시험일 순으로 정렬
-    existing.sort((a, b) => a.examDateTime.compareTo(b.examDateTime));
+    // 날짜 > 학교 > 계열 순으로 정렬
+    existing.sort((a, b) {
+      int dateComparison = a.examDateTime.compareTo(b.examDateTime);
+      if (dateComparison != 0) return dateComparison;
+      
+      int universityComparison = a.university.compareTo(b.university);
+      if (universityComparison != 0) return universityComparison;
+      
+      return a.category.compareTo(b.category);
+    });
 
     final jsonList = existing.map((e) => jsonEncode(e.toMap())).toList();
     await prefs.setStringList(_selectedSchedulesKey, jsonList);
@@ -38,8 +46,16 @@ class LocalScheduleService {
     if (index >= 0 && index < existing.length) {
       existing.removeAt(index);
 
-      // 시험일 순으로 정렬
-      existing.sort((a, b) => a.examDateTime.compareTo(b.examDateTime));
+      // 날짜 > 학교 > 계열 순으로 정렬
+      existing.sort((a, b) {
+        int dateComparison = a.examDateTime.compareTo(b.examDateTime);
+        if (dateComparison != 0) return dateComparison;
+        
+        int universityComparison = a.university.compareTo(b.university);
+        if (universityComparison != 0) return universityComparison;
+        
+        return a.category.compareTo(b.category);
+      });
 
       final jsonList = existing.map((e) => jsonEncode(e.toMap())).toList();
       await prefs.setStringList(_selectedSchedulesKey, jsonList);
@@ -53,8 +69,16 @@ class LocalScheduleService {
   Future<void> saveAllSelectedSchedules(List<ExamSchedule> schedules) async {
     final prefs = await SharedPreferences.getInstance();
 
-    // 시험일 순으로 정렬
-    schedules.sort((a, b) => a.examDateTime.compareTo(b.examDateTime));
+    // 날짜 > 학교 > 계열 순으로 정렬
+    schedules.sort((a, b) {
+      int dateComparison = a.examDateTime.compareTo(b.examDateTime);
+      if (dateComparison != 0) return dateComparison;
+      
+      int universityComparison = a.university.compareTo(b.university);
+      if (universityComparison != 0) return universityComparison;
+      
+      return a.category.compareTo(b.category);
+    });
 
     final jsonList = schedules.map((e) => jsonEncode(e.toMap())).toList();
     await prefs.setStringList(_selectedSchedulesKey, jsonList);
@@ -109,6 +133,10 @@ class LocalScheduleService {
           firstSchedule.university,
         );
         await prefs.setString(
+          'flutter.exam_category',
+          firstSchedule.category,
+        );
+        await prefs.setString(
           'flutter.exam_department',
           firstSchedule.department,
         );
@@ -126,6 +154,7 @@ class LocalScheduleService {
         // 빈 데이터 저장
         await prefs.setString('flutter.selectedSchedules', '[]');
         await prefs.remove('flutter.exam_university');
+        await prefs.remove('flutter.exam_category');
         await prefs.remove('flutter.exam_department');
         await prefs.remove('flutter.exam_dateTime');
 
@@ -162,6 +191,7 @@ class LocalScheduleService {
       existing[i] = ExamSchedule(
         id: schedule.id,
         university: schedule.university,
+        category: schedule.category,
         department: schedule.department,
         address: schedule.address,
         examDateTime: schedule.examDateTime,
@@ -184,6 +214,7 @@ class LocalScheduleService {
         existing[i] = ExamSchedule(
           id: schedule.id,
           university: schedule.university,
+          category: schedule.category,
           department: schedule.department,
           address: schedule.address,
           examDateTime: schedule.examDateTime,

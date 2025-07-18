@@ -4,6 +4,7 @@ import 'package:aim_nonsul/screens/add_exam_screen.dart';
 import 'package:aim_nonsul/services/local_schedule_service.dart';
 import 'package:aim_nonsul/services/widget_service.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
+import 'package:aim_nonsul/utils/conflict_util.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<ExamSchedule> selectedSchedules = [];
+  List<ExamSchedule> conflictingSchedules = [];
   final LocalScheduleService _localService = LocalScheduleService();
 
   @override
@@ -25,9 +27,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> loadSelected() async {
     final list = await _localService.loadSelectedSchedules();
-    list.sort((a, b) => a.examDateTime.compareTo(b.examDateTime));
+    list.sort((a, b) {
+      int dateComparison = a.examDateTime.compareTo(b.examDateTime);
+      if (dateComparison != 0) return dateComparison;
+
+      int universityComparison = a.university.compareTo(b.university);
+      if (universityComparison != 0) return universityComparison;
+
+      return a.category.compareTo(b.category);
+    });
+    
+    final conflicts = getConflictingSchedulesInList(list);
     setState(() {
       selectedSchedules = list;
+      conflictingSchedules = conflicts;
     });
 
     await WidgetService.updateWidget(list);
@@ -261,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
               border: Border.all(
                 color:
                     item.isPrimary
-                        ? AppTheme.warningColor.withOpacity(0.2)
+                        ? AppTheme.warningColor.withValues(alpha: 0.2)
                         : Colors.transparent,
                 width: 1.5,
               ),
@@ -273,6 +286,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Row(
                     children: [
+                      if (conflictingSchedules.contains(item))
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
+                              size: 16,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
