@@ -5,7 +5,6 @@ class ExamSchedule {
   final String university;
   final String category;
   final String department;
-  final String address;
   final DateTime examDateTime;
   final bool isPrimary;
 
@@ -14,7 +13,6 @@ class ExamSchedule {
     required this.university,
     required this.category,
     required this.department,
-    required this.address,
     required this.examDateTime,
     this.isPrimary = false,
   });
@@ -26,7 +24,6 @@ class ExamSchedule {
       university: data['university'],
       category: data['category'],
       department: data['department'],
-      address: data['address'],
       examDateTime: (data['examDateTime'] as Timestamp).toDate(),
       isPrimary: data['isPrimary'] ?? false,
     );
@@ -39,7 +36,6 @@ class ExamSchedule {
       'university': university,
       'category': category,
       'department': department,
-      'address': address,
       'examDateTime': examDateTime.toIso8601String(),
       'isPrimary': isPrimary,
     };
@@ -52,7 +48,6 @@ class ExamSchedule {
       university: map['university'],
       category: map['category'] ?? '기타',
       department: map['department'],
-      address: map['address'],
       examDateTime: DateTime.parse(map['examDateTime']),
       isPrimary: map['isPrimary'] ?? false,
     );

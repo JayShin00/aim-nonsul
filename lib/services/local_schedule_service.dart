@@ -193,7 +193,6 @@ class LocalScheduleService {
         university: schedule.university,
         category: schedule.category,
         department: schedule.department,
-        address: schedule.address,
         examDateTime: schedule.examDateTime,
         isPrimary: schedule.id == targetId, // 해당 ID만 true로 설정
       );
@@ -216,7 +215,6 @@ class LocalScheduleService {
           university: schedule.university,
           category: schedule.category,
           department: schedule.department,
-          address: schedule.address,
           examDateTime: schedule.examDateTime,
           isPrimary: false,
         );

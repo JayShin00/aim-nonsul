@@ -98,15 +98,19 @@ class _AddExamScreenState extends State<AddExamScreen> {
     }
 
     // 이미 추가된 모집단위인지 확인
-    final isDuplicate = existing.any((existing) =>
-        existing.id == selected.id ||
-        (existing.university == selected.university &&
-            existing.department == selected.department));
+    final isDuplicate = existing.any(
+      (existing) =>
+          existing.id == selected.id ||
+          (existing.university == selected.university &&
+              existing.department == selected.department),
+    );
 
     if (isDuplicate) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("❗ ${selected.university} ${selected.department}는 이미 추가된 모집단위입니다."),
+          content: Text(
+            "❗ ${selected.university} ${selected.department}는 이미 추가된 모집단위입니다.",
+          ),
           backgroundColor: Colors.orange,
           duration: const Duration(seconds: 2),
         ),
@@ -546,6 +550,12 @@ class _AddExamScreenState extends State<AddExamScreen> {
   String _formatTimeKorean(DateTime dateTime) {
     final hour = dateTime.hour;
     final minute = dateTime.minute;
+
+    // 시간이 00:00인 경우 (시간 정보가 없는 경우) TBD 표시
+    if (hour == 0 && minute == 0) {
+      return '시간 미정';
+    }
+
     final period = hour < 12 ? '오전' : '오후';
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     final minuteStr = minute == 0 ? '' : ' ${minute}분';

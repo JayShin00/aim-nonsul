@@ -22,8 +22,13 @@ def upload_csv_to_firestore(csv_file, collection_name):
             # 날짜+시간 결합 → datetime 변환
             date_str = row['examDate']  # 예: 2025-11-22
             time_str = row['examTime']  # 예: 09:00
-            combined_str = f"{date_str} {time_str}"
-            exam_datetime = datetime.strptime(combined_str, "%Y-%m-%d %H:%M")
+            
+            # examTime이 비어있는 경우 날짜만으로 datetime 생성
+            if pd.isna(time_str) or time_str == '' or time_str.strip() == '':
+                exam_datetime = datetime.strptime(date_str, "%Y-%m-%d")
+            else:
+                combined_str = f"{date_str} {time_str}"
+                exam_datetime = datetime.strptime(combined_str, "%Y-%m-%d %H:%M")
 
             # 저장할 데이터 구성
             data = {
@@ -31,7 +36,6 @@ def upload_csv_to_firestore(csv_file, collection_name):
                 "university": row["university"],
                 "category": row["category"],
                 "department": row["department"],
-                "address": row["address"],
                 "examDateTime": exam_datetime,
             }
 
