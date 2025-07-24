@@ -13,6 +13,8 @@ import android.util.Log
 import android.view.View
 import android.graphics.Color
 import java.util.concurrent.TimeUnit
+import android.content.Intent
+import android.app.PendingIntent
 
 class ExamWidget : AppWidgetProvider() {
 
@@ -128,6 +130,21 @@ class ExamWidget : AppWidgetProvider() {
                 Log.e("ExamWidget", "위젯 업데이트 오류", e)
                 showEmptyState(views)
             }
+            
+            // 위젯 클릭 시 앱 실행하도록 PendingIntent 설정
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            // 전체 위젯에 클릭 리스너 설정
+            views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
             
             // 위젯 업데이트
             appWidgetManager.updateAppWidget(appWidgetId, views)

@@ -49,7 +49,6 @@ class WidgetService {
         'department': exam.department,
         'examDateTime': exam.examDateTime.toIso8601String(),
         'isPrimary': exam.isPrimary,
-        'address': exam.address,
       };
 
       // JSON 문자열로 변환
@@ -63,7 +62,7 @@ class WidgetService {
       final timeFormat = DateFormat('HH:mm');
       final examDate = dateFormat.format(exam.examDateTime);
       final examTime = timeFormat.format(exam.examDateTime);
-      final daysLeft = _calculateDaysLeft(exam.examDateTime);
+      final String daysLeft = _calculateDaysLeft(exam.examDateTime);
 
       await HomeWidget.saveWidgetData<String>(
         'exam_title',
@@ -75,7 +74,7 @@ class WidgetService {
       );
       await HomeWidget.saveWidgetData<String>('exam_date', examDate);
       await HomeWidget.saveWidgetData<String>('exam_time', examTime);
-      await HomeWidget.saveWidgetData<String>('exam_room', exam.address);
+      await HomeWidget.saveWidgetData<String>('exam_room', '');
       await HomeWidget.saveWidgetData<String>('days_left', daysLeft);
 
       // 위젯 업데이트 트리거

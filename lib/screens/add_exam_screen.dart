@@ -57,7 +57,15 @@ class _AddExamScreenState extends State<AddExamScreen> {
   }
 
   void sortByDate() {
-    filteredSchedules.sort((a, b) => a.examDateTime.compareTo(b.examDateTime));
+    filteredSchedules.sort((a, b) {
+      int dateComparison = a.examDateTime.compareTo(b.examDateTime);
+      if (dateComparison != 0) return dateComparison;
+
+      int universityComparison = a.university.compareTo(b.university);
+      if (universityComparison != 0) return universityComparison;
+
+      return a.category.compareTo(b.category);
+    });
   }
 
   void onSearchChanged(String query) {
@@ -68,7 +76,8 @@ class _AddExamScreenState extends State<AddExamScreen> {
               .where(
                 (s) =>
                     s.university.toLowerCase().contains(searchQuery) ||
-                    s.department.toLowerCase().contains(searchQuery),
+                    s.department.toLowerCase().contains(searchQuery) ||
+                    s.category.toLowerCase().contains(searchQuery),
               )
               .toList();
       sortByDate();
@@ -88,23 +97,144 @@ class _AddExamScreenState extends State<AddExamScreen> {
       return;
     }
 
-    if (isDateConflict(existing, selected)) {
+    // 이미 추가된 모집단위인지 확인
+    final isDuplicate = existing.any(
+      (existing) =>
+          existing.id == selected.id ||
+          (existing.university == selected.university &&
+              existing.department == selected.department),
+    );
+
+    if (isDuplicate) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            "❗ ${selected.university} ${selected.department}와 일정이 겹칩니다.",
+            "❗ ${selected.university} ${selected.department}는 이미 추가된 모집단위입니다.",
           ),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 2),
         ),
       );
       return;
     }
 
+    final conflictingSchedules = getConflictingSchedules(existing, selected);
+    if (conflictingSchedules.isNotEmpty) {
+      final shouldAdd = await _showConflictDialog(
+        selected,
+        conflictingSchedules,
+      );
+      if (!shouldAdd) return;
+    }
+
     await _localService.saveSelectedSchedule(selected);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("${selected.university} ${selected.department} 추가 완료!"),
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "✅ ${selected.university} ${selected.department} 추가 완료!",
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<bool> _showConflictDialog(
+    ExamSchedule selected,
+    List<ExamSchedule> conflicts,
+  ) async {
+    final conflictText =
+        conflicts.length == 1
+            ? "${conflicts.first.university} ${conflicts.first.department}"
+            : "${conflicts.length}개의 모집단위";
+
+    return await showDialog<bool>(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.orange,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        "시험일정 중복 안내",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "${selected.university} ${selected.department}",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "위 모집단위는 $conflictText와 시험일자가 겹칩니다.",
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text(
+                      "취소",
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      "추가하기",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
   }
 
   @override
@@ -157,7 +287,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
             child: TextField(
               onChanged: onSearchChanged,
               decoration: InputDecoration(
-                hintText: "학교명 또는 모집단위명 검색",
+                hintText: "학교명, 모집단위명 또는 계열 검색",
                 hintStyle: AppTheme.bodyMedium.copyWith(
                   color: AppTheme.textLight,
                 ),
@@ -304,13 +434,48 @@ class _AddExamScreenState extends State<AddExamScreen> {
                                                 horizontal: 16,
                                                 vertical: 12,
                                               ),
-                                          title: Text(
-                                            "${schedule.university} ${schedule.department}",
-                                            style: AppTheme.bodyLarge.copyWith(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppTheme.textPrimary,
-                                            ),
+                                          title: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.primaryColor
+                                                      .withValues(alpha: 0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  schedule.category,
+                                                  style: AppTheme.bodyMedium
+                                                      .copyWith(
+                                                        color:
+                                                            AppTheme
+                                                                .primaryColor,
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                      ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                "${schedule.university} ${schedule.department}",
+                                                style: AppTheme.bodyLarge
+                                                    .copyWith(
+                                                      fontSize: 18,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color:
+                                                          AppTheme.textPrimary,
+                                                    ),
+                                              ),
+                                            ],
                                           ),
                                           subtitle: Padding(
                                             padding: const EdgeInsets.only(
@@ -375,10 +540,6 @@ class _AddExamScreenState extends State<AddExamScreen> {
     return "${dateTime.year}.${dateTime.month.toString().padLeft(2, '0')}.${dateTime.day.toString().padLeft(2, '0')}";
   }
 
-  String _formatTime(DateTime dateTime) {
-    return "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
-  }
-
   String _formatDateKorean(String dateString) {
     final parts = dateString.split('.');
     final month = int.parse(parts[1]);
@@ -389,6 +550,12 @@ class _AddExamScreenState extends State<AddExamScreen> {
   String _formatTimeKorean(DateTime dateTime) {
     final hour = dateTime.hour;
     final minute = dateTime.minute;
+
+    // 시간이 00:00인 경우 (시간 정보가 없는 경우) TBD 표시
+    if (hour == 0 && minute == 0) {
+      return '시간 미정';
+    }
+
     final period = hour < 12 ? '오전' : '오후';
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     final minuteStr = minute == 0 ? '' : ' ${minute}분';

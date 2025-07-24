@@ -3,16 +3,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ExamSchedule {
   final int id;
   final String university;
+  final String category;
   final String department;
-  final String address;
   final DateTime examDateTime;
   final bool isPrimary;
 
   ExamSchedule({
     required this.id,
     required this.university,
+    required this.category,
     required this.department,
-    required this.address,
     required this.examDateTime,
     this.isPrimary = false,
   });
@@ -22,8 +22,8 @@ class ExamSchedule {
     return ExamSchedule(
       id: data['id'],
       university: data['university'],
+      category: data['category'],
       department: data['department'],
-      address: data['address'],
       examDateTime: (data['examDateTime'] as Timestamp).toDate(),
       isPrimary: data['isPrimary'] ?? false,
     );
@@ -34,8 +34,8 @@ class ExamSchedule {
     return {
       'id': id,
       'university': university,
+      'category': category,
       'department': department,
-      'address': address,
       'examDateTime': examDateTime.toIso8601String(),
       'isPrimary': isPrimary,
     };
@@ -46,8 +46,8 @@ class ExamSchedule {
     return ExamSchedule(
       id: map['id'],
       university: map['university'],
+      category: map['category'] ?? '기타',
       department: map['department'],
-      address: map['address'],
       examDateTime: DateTime.parse(map['examDateTime']),
       isPrimary: map['isPrimary'] ?? false,
     );
