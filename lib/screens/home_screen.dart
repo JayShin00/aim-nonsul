@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       return a.category.compareTo(b.category);
     });
-    
+
     final conflicts = getConflictingSchedulesInList(list);
     setState(() {
       selectedSchedules = list;
@@ -284,77 +284,98 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Stack(
                     children: [
-                      if (conflictingSchedules.contains(item))
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.warning_amber_rounded,
-                              size: 16,
-                              color: Colors.orange,
-                            ),
-                          ),
-                        ),
-                      Expanded(
-                        child: Column(
+                      // 학교/학과 정보 영역
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          right: 110,
+                        ), // D-Day 영역만큼 여백 (더 넓게)
+                        child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              item.university,
-                              style: AppTheme.headingSmall.copyWith(
-                                fontSize: 18,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-
-                            Row(
-                              children: [
-                                Text(
-                                  item.department,
-                                  style: AppTheme.headingSmall.copyWith(
-                                    fontSize: 18,
+                            if (conflictingSchedules.contains(item))
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  right: 8,
+                                  top: 2,
+                                ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.warning_amber_rounded,
+                                    size: 16,
+                                    color: Colors.orange,
                                   ),
                                 ),
-                                if (item.isPrimary)
-                                  const Padding(
-                                    padding: EdgeInsets.only(left: 6),
-                                    child: Icon(
-                                      Icons.star,
-                                      size: 16,
-                                      color: AppTheme.warningColor,
+                              ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.university,
+                                    style: AppTheme.headingSmall.copyWith(
+                                      fontSize: 18,
+                                      color: AppTheme.textSecondary,
                                     ),
                                   ),
-                              ],
+                                  const SizedBox(height: 2),
+
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          item.department,
+                                          style: AppTheme.headingSmall.copyWith(
+                                            fontSize: 18,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.visible,
+                                          softWrap: true,
+                                        ),
+                                      ),
+                                      if (item.isPrimary)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 6,
+                                          ),
+                                          child: Icon(
+                                            Icons.star,
+                                            size: 16,
+                                            color: AppTheme.warningColor,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
 
-                      /// D-Day 뱃지
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        // decoration: BoxDecoration(
-                        //   color: dDayColor,
-                        //   borderRadius: BorderRadius.circular(100),
-                        // ),
-                        child: Text(
-                          dDay,
-                          style: const TextStyle(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 28,
-                            letterSpacing: 0.5,
+                      // D-Day 뱃지 (오른쪽 고정)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: Text(
+                            dDay,
+                            style: const TextStyle(
+                              color: AppTheme.primaryColor,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 28,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ),
