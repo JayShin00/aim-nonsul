@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime
 
 # 서비스 계정 키 경로
-SERVICE_ACCOUNT_KEY_PATH = 'aim-nonsul-firebase-adminsdk-fbsvc-bc7f3e2260.json'
+SERVICE_ACCOUNT_KEY_PATH = 'aim-nonsul-84e84-firebase-adminsdk-fbsvc-dedb5eb41f.json'
 # CSV 파일 경로
 CSV_FILE_PATH = 'assets/exam_schedule.csv'
 # Firestore 컬렉션 이름

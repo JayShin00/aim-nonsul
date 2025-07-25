@@ -50,19 +50,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDNwhyhd31fUNvw9RrbU3U3BnzzdOA0ick',
-    appId: '1:451694976375:android:1174ad98058de92393d572',
-    messagingSenderId: '451694976375',
-    projectId: 'aim-nonsul',
-    storageBucket: 'aim-nonsul.firebasestorage.app',
+    apiKey: 'AIzaSyBDJD25S3WwZLZoMadPZ12WgrKtoSIpgHQ',
+    appId: '1:901993207690:android:7fe331fb47cb6198acda73',
+    messagingSenderId: '901993207690',
+    projectId: 'aim-nonsul-84e84',
+    storageBucket: 'aim-nonsul-84e84.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyD9059UF--Y6UPz_QUxo8K4SHcCdAHrz-w',
-    appId: '1:451694976375:ios:3f58aed7c989b14993d572',
-    messagingSenderId: '451694976375',
-    projectId: 'aim-nonsul',
-    storageBucket: 'aim-nonsul.firebasestorage.app',
-    iosBundleId: 'com.example.aimNonsul',
+    apiKey: 'AIzaSyB-jOmUXbhYtNr7e6YXkVlZLFn1gzBiMYc',
+    appId: '1:901993207690:ios:e98a83c944078500acda73',
+    messagingSenderId: '901993207690',
+    projectId: 'aim-nonsul-84e84',
+    storageBucket: 'aim-nonsul-84e84.firebasestorage.app',
+    iosBundleId: 'com.aim.aimNonsul',
   );
+
 }
