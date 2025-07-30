@@ -223,25 +223,6 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(child: _buildScheduleList()),
             ],
           ),
-          // Powered by AIM 로고
-          Positioned(
-            bottom: 40,
-            left: 20,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "powered by ",
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                Image.asset('assets/aim_logo.png', height: 22),
-              ],
-            ),
-          ),
         ],
       ),
       floatingActionButton: Padding(
@@ -350,13 +331,33 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildScheduleList() {
     return ListView.builder(
       padding: const EdgeInsets.only(top: 0, left: 20, right: 20, bottom: 20),
-      itemCount: selectedSchedules.length + 1, // +1 for notice accordion
+      itemCount: selectedSchedules.length + 2, // +2 for notice accordion and powered by
       itemBuilder: (context, index) {
-        // 마지막 아이템은 안내사항 아코디언
+        // 마지막에서 두 번째 아이템은 안내사항 아코디언
         if (index == selectedSchedules.length) {
           return Padding(
             padding: const EdgeInsets.only(top: 16),
             child: _buildNoticeAccordion(),
+          );
+        }
+        // 마지막 아이템은 powered by 로고
+        if (index == selectedSchedules.length + 1) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(
+                  "powered by ",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                Image.asset('assets/aim_logo.png', height: 22),
+              ],
+            ),
           );
         }
         final item = selectedSchedules[index];
