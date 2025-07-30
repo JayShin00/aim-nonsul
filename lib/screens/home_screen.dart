@@ -27,7 +27,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> loadSelected() async {
     final list = await _localService.loadSelectedSchedules();
-    list.sort((a, b) {
+
+    // 고정 수능 일정 생성
+    final suneungExam = ExamSchedule(
+      id: -1, // 고정 아이템을 위한 특별한 ID
+      university: '대학수학능력시험',
+      department: '수능',
+      category: '수능',
+      examDateTime: DateTime(2025, 11, 13),
+      isPrimary: false,
+    );
+
+    // 수능을 맨 앞에 추가
+    final allSchedules = [suneungExam, ...list];
+
+    allSchedules.sort((a, b) {
+      // 수능은 항상 맨 앞에
+      if (a.id == -1) return -1;
+      if (b.id == -1) return 1;
+
       int dateComparison = a.examDateTime.compareTo(b.examDateTime);
       if (dateComparison != 0) return dateComparison;
 
@@ -37,13 +55,13 @@ class _HomeScreenState extends State<HomeScreen> {
       return a.category.compareTo(b.category);
     });
 
-    final conflicts = getConflictingSchedulesInList(list);
+    final conflicts = getConflictingSchedulesInList(allSchedules);
     setState(() {
-      selectedSchedules = list;
+      selectedSchedules = allSchedules;
       conflictingSchedules = conflicts;
     });
 
-    await WidgetService.updateWidget(list);
+    await WidgetService.updateWidget(list); // 위젯 업데이트는 원래 리스트만 사용
   }
 
   Future<void> removeSelectedSchedule(int index) async {
@@ -97,12 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-          Expanded(
-            child:
-                selectedSchedules.isEmpty
-                    ? _buildEmptyState()
-                    : _buildScheduleList(),
-          ),
+          Expanded(child: _buildScheduleList()),
         ],
       ),
       floatingActionButton: Padding(
@@ -147,6 +160,73 @@ class _HomeScreenState extends State<HomeScreen> {
         final item = selectedSchedules[index];
         final dDay = calculateDDay(item.examDateTime);
         final dDayColor = getDDayColor(dDay);
+        final isFixedSuneung = item.id == -1; // 고정 수능인지 확인
+
+        // 고정 수능의 경우 Dismissible 없이 일반 Container로 반환
+        if (isFixedSuneung) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppTheme.cardShadow,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 학과 정보
+                      Expanded(
+                        child: Text(
+                          item.department,
+                          style: AppTheme.headingSmall.copyWith(
+                            fontSize: 22,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      // D-Day
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          dDay,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 28,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // const SizedBox(height: 6),
+
+                  /// 시험일자
+                  Row(
+                    children: [
+                      Text(
+                        formatDate(item.examDateTime),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
         return Dismissible(
           key: Key(item.id.toString()),
@@ -197,7 +277,8 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           onDismissed: (direction) async {
             if (direction == DismissDirection.endToStart) {
-              await removeSelectedSchedule(index);
+              // 수능이 아닌 경우에만 삭제 (수능은 index 0이므로 index-1로 조정)
+              await removeSelectedSchedule(index - 1);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text("${item.university} ${item.department} 삭제됨"),
