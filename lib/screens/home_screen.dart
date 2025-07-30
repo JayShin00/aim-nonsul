@@ -96,26 +96,49 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: Column(
+      body: Stack(
         children: [
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "AIM D-Day",
-                  style: GoogleFonts.poppins(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                    letterSpacing: 0,
+          Column(
+            children: [
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "수능・논술 D-Day",
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textPrimary,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
                   ),
                 ),
               ),
+              Expanded(child: _buildScheduleList()),
+            ],
+          ),
+          // Powered by AIM 로고
+          Positioned(
+            bottom: 20,
+            left: 20,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "powered by ",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                Image.asset('assets/aim_logo.png', height: 22),
+              ],
             ),
           ),
-          Expanded(child: _buildScheduleList()),
         ],
       ),
       floatingActionButton: Padding(
