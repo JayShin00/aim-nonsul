@@ -553,7 +553,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
 
     // 시간이 00:00인 경우 (시간 정보가 없는 경우) TBD 표시
     if (hour == 0 && minute == 0) {
-      return '시간 미정';
+      return '업데이트 예정';
     }
 
     final period = hour < 12 ? '오전' : '오후';

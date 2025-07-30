@@ -6,6 +6,7 @@ import 'package:aim_nonsul/services/widget_service.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
 import 'package:aim_nonsul/utils/conflict_util.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,16 +19,120 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ExamSchedule> selectedSchedules = [];
   List<ExamSchedule> conflictingSchedules = [];
   final LocalScheduleService _localService = LocalScheduleService();
+  bool _isNoticeExpanded = false;
 
   @override
   void initState() {
     super.initState();
     loadSelected();
+    _checkFirstLaunch();
+  }
+
+  Future<void> _checkFirstLaunch() async {
+    final isFirst = await _localService.isFirstLaunch();
+    if (isFirst) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showDisclaimerDialog();
+      });
+    }
+  }
+
+  Future<void> _launchEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'admin@aimscore.ai',
+      query: '?subject=AIM 논술 D-Day 앱 문의',
+    );
+
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('이메일 앱을 열 수 없습니다')));
+    }
+  }
+
+  Widget _buildNoticeContent() {
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(
+          height: 1.5,
+          color: Colors.black87,
+          fontSize: 14,
+        ),
+        children: [
+          const TextSpan(
+            text:
+                '본 앱의 일정 정보는 참고용으로 제공되며,\n급작스러운 변동이나 공식 발표에 따라 실제 일정과 다를 수 있습니다.\n정확한 정보는 해당 기관의 공식 발표를 확인해 주시기 바랍니다.\n\n정보 수정이나 문의: ',
+          ),
+          WidgetSpan(
+            child: GestureDetector(
+              onTap: _launchEmail,
+              child: const Text(
+                'admin@aimscore.ai',
+                style: TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDisclaimerDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 배경 터치로 닫기 비활성화
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning, color: Colors.orange, size: 24),
+              SizedBox(width: 8),
+              Text('안내사항'),
+            ],
+          ),
+          content: _buildNoticeContent(),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await _localService.setFirstLaunchComplete();
+                Navigator.of(context).pop();
+              },
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> loadSelected() async {
     final list = await _localService.loadSelectedSchedules();
-    list.sort((a, b) {
+
+    // 고정 수능 일정 생성
+    final suneungExam = ExamSchedule(
+      id: -1, // 고정 아이템을 위한 특별한 ID
+      university: '대학수학능력시험',
+      department: '수능',
+      category: '수능',
+      examDateTime: DateTime(2025, 11, 13),
+      isPrimary: false,
+    );
+
+    // 수능을 맨 앞에 추가
+    final allSchedules = [suneungExam, ...list];
+
+    allSchedules.sort((a, b) {
+      // 수능은 항상 맨 앞에
+      if (a.id == -1) return -1;
+      if (b.id == -1) return 1;
+
       int dateComparison = a.examDateTime.compareTo(b.examDateTime);
       if (dateComparison != 0) return dateComparison;
 
@@ -37,13 +142,13 @@ class _HomeScreenState extends State<HomeScreen> {
       return a.category.compareTo(b.category);
     });
 
-    final conflicts = getConflictingSchedulesInList(list);
+    final conflicts = getConflictingSchedulesInList(allSchedules);
     setState(() {
-      selectedSchedules = list;
+      selectedSchedules = allSchedules;
       conflictingSchedules = conflicts;
     });
 
-    await WidgetService.updateWidget(list);
+    await WidgetService.updateWidget(list); // 위젯 업데이트는 원래 리스트만 사용
   }
 
   Future<void> removeSelectedSchedule(int index) async {
@@ -78,30 +183,45 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: Column(
+      body: Stack(
         children: [
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "AIM D-Day",
-                  style: GoogleFonts.poppins(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                    letterSpacing: 0,
+          Column(
+            children: [
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: "수능・논술 ",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 24,
+                              color: AppTheme.textPrimary,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          // 영어 + D-Day 부분 (기본 굵기)
+                          TextSpan(
+                            text: "D-Day",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700, // 기본 굵기
+                              fontSize: 24,
+                              color: AppTheme.textPrimary,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          Expanded(
-            child:
-                selectedSchedules.isEmpty
-                    ? _buildEmptyState()
-                    : _buildScheduleList(),
+              Expanded(child: _buildScheduleList()),
+            ],
           ),
         ],
       ),
@@ -139,14 +259,177 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildNoticeAccordion() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isNoticeExpanded = !_isNoticeExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    color: Colors.orange,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      '안내사항',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _isNoticeExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_isNoticeExpanded)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  _buildNoticeContent(),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildScheduleList() {
     return ListView.builder(
       padding: const EdgeInsets.only(top: 0, left: 20, right: 20, bottom: 20),
-      itemCount: selectedSchedules.length,
+      itemCount: selectedSchedules.length + 2, // +2 for notice accordion and powered by
       itemBuilder: (context, index) {
+        // 마지막에서 두 번째 아이템은 안내사항 아코디언
+        if (index == selectedSchedules.length) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: _buildNoticeAccordion(),
+          );
+        }
+        // 마지막 아이템은 powered by 로고
+        if (index == selectedSchedules.length + 1) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Text(
+                  "powered by ",
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                Image.asset('assets/aim_logo.png', height: 22),
+              ],
+            ),
+          );
+        }
         final item = selectedSchedules[index];
         final dDay = calculateDDay(item.examDateTime);
         final dDayColor = getDDayColor(dDay);
+        final isFixedSuneung = item.id == -1; // 고정 수능인지 확인
+
+        // 고정 수능의 경우 Dismissible 없이 일반 Container로 반환
+        if (isFixedSuneung) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: AppTheme.cardShadow,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 학과 정보
+                      Expanded(
+                        child: Text(
+                          item.department,
+                          style: AppTheme.headingSmall.copyWith(
+                            fontSize: 22,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      // D-Day
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        child: Text(
+                          dDay,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 28,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // const SizedBox(height: 6),
+
+                  /// 시험일자
+                  Row(
+                    children: [
+                      Text(
+                        formatDate(item.examDateTime),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
 
         return Dismissible(
           key: Key(item.id.toString()),
@@ -197,7 +480,8 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           onDismissed: (direction) async {
             if (direction == DismissDirection.endToStart) {
-              await removeSelectedSchedule(index);
+              // 수능이 아닌 경우에만 삭제 (수능은 index 0이므로 index-1로 조정)
+              await removeSelectedSchedule(index - 1);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text("${item.university} ${item.department} 삭제됨"),
