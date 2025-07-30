@@ -6,6 +6,7 @@ import 'package:aim_nonsul/services/widget_service.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
 import 'package:aim_nonsul/utils/conflict_util.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,11 +19,97 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ExamSchedule> selectedSchedules = [];
   List<ExamSchedule> conflictingSchedules = [];
   final LocalScheduleService _localService = LocalScheduleService();
+  bool _isNoticeExpanded = false;
 
   @override
   void initState() {
     super.initState();
     loadSelected();
+    _checkFirstLaunch();
+  }
+
+  Future<void> _checkFirstLaunch() async {
+    final isFirst = await _localService.isFirstLaunch();
+    if (isFirst) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showDisclaimerDialog();
+      });
+    }
+  }
+
+  Future<void> _launchEmail() async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: 'admin@aimscore.ai',
+      query: '?subject=AIM 논술 D-Day 앱 문의',
+    );
+
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('이메일 앱을 열 수 없습니다')));
+    }
+  }
+
+  Widget _buildNoticeContent() {
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(
+          height: 1.5,
+          color: Colors.black87,
+          fontSize: 14,
+        ),
+        children: [
+          const TextSpan(
+            text:
+                '본 앱의 일정 정보는 참고용으로 제공되며,\n급작스러운 변동이나 공식 발표에 따라 실제 일정과 다를 수 있습니다.\n정확한 정보는 해당 기관의 공식 발표를 확인해 주시기 바랍니다.\n\n정보 수정이나 문의: ',
+          ),
+          WidgetSpan(
+            child: GestureDetector(
+              onTap: _launchEmail,
+              child: const Text(
+                'admin@aimscore.ai',
+                style: TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDisclaimerDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 배경 터치로 닫기 비활성화
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning, color: Colors.orange, size: 24),
+              SizedBox(width: 8),
+              Text('안내사항'),
+            ],
+          ),
+          content: _buildNoticeContent(),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await _localService.setFirstLaunchComplete();
+                Navigator.of(context).pop();
+              },
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> loadSelected() async {
@@ -105,13 +192,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      "수능・논술 D-Day",
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary,
-                        letterSpacing: -0.5,
+                    child: RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: "수능・논술 ",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 24,
+                              color: AppTheme.textPrimary,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          // 영어 + D-Day 부분 (기본 굵기)
+                          TextSpan(
+                            text: "D-Day",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700, // 기본 굵기
+                              fontSize: 24,
+                              color: AppTheme.textPrimary,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -122,7 +225,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           // Powered by AIM 로고
           Positioned(
-            bottom: 20,
+            bottom: 40,
             left: 20,
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -175,11 +278,87 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildNoticeAccordion() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isNoticeExpanded = !_isNoticeExpanded;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    color: Colors.orange,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      '안내사항',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _isNoticeExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_isNoticeExpanded)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  _buildNoticeContent(),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildScheduleList() {
     return ListView.builder(
       padding: const EdgeInsets.only(top: 0, left: 20, right: 20, bottom: 20),
-      itemCount: selectedSchedules.length,
+      itemCount: selectedSchedules.length + 1, // +1 for notice accordion
       itemBuilder: (context, index) {
+        // 마지막 아이템은 안내사항 아코디언
+        if (index == selectedSchedules.length) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: _buildNoticeAccordion(),
+          );
+        }
         final item = selectedSchedules[index];
         final dDay = calculateDDay(item.examDateTime);
         final dDayColor = getDDayColor(dDay);

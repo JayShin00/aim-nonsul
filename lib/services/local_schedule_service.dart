@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 class LocalScheduleService {
   static const String _selectedSchedulesKey = 'selectedSchedules';
+  static const String _firstLaunchKey = 'isFirstLaunch';
 
   // 선택된 일정들 불러오기
   Future<List<ExamSchedule>> loadSelectedSchedules() async {
@@ -234,5 +235,17 @@ class LocalScheduleService {
     } catch (e) {
       return null; // 대표 모집단위가 없는 경우
     }
+  }
+
+  // 첫 실행 여부 확인
+  Future<bool> isFirstLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_firstLaunchKey) ?? true;
+  }
+
+  // 첫 실행 상태 설정
+  Future<void> setFirstLaunchComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_firstLaunchKey, false);
   }
 }
