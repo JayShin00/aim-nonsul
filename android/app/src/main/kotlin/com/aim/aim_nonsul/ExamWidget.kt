@@ -1,4 +1,4 @@
-package com.example.aim_nonsul
+package com.aim.aim_nonsul
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
