@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:aim_nonsul/models/exam_schedule.dart';
 import 'package:aim_nonsul/screens/add_exam_screen.dart';
 import 'package:aim_nonsul/services/local_schedule_service.dart';
-import 'package:aim_nonsul/services/widget_service.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
 import 'package:aim_nonsul/utils/conflict_util.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -113,34 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadSelected() async {
-    final list = await _localService.loadSelectedSchedules();
-
-    // 고정 수능 일정 생성
-    final suneungExam = ExamSchedule(
-      id: -1, // 고정 아이템을 위한 특별한 ID
-      university: '대학수학능력시험',
-      department: '수능',
-      category: '수능',
-      examDateTime: DateTime(2025, 11, 13),
-      isPrimary: false,
-    );
-
-    // 수능을 맨 앞에 추가
-    final allSchedules = [suneungExam, ...list];
-
-    allSchedules.sort((a, b) {
-      // 수능은 항상 맨 앞에
-      if (a.id == -1) return -1;
-      if (b.id == -1) return 1;
-
-      int dateComparison = a.examDateTime.compareTo(b.examDateTime);
-      if (dateComparison != 0) return dateComparison;
-
-      int universityComparison = a.university.compareTo(b.university);
-      if (universityComparison != 0) return universityComparison;
-
-      return a.category.compareTo(b.category);
-    });
+    final allSchedules =
+        await _localService.loadSelectedSchedules(); // 수능 포함된 전체 스케줄
 
     final conflicts = getConflictingSchedulesInList(allSchedules);
     setState(() {
@@ -148,11 +121,12 @@ class _HomeScreenState extends State<HomeScreen> {
       conflictingSchedules = conflicts;
     });
 
-    await WidgetService.updateWidget(list); // 위젯 업데이트는 원래 리스트만 사용
+    // 위젯 업데이트 (수능 포함된 전체 스케줄로)
+    await _localService.updateWidgets(allSchedules);
   }
 
-  Future<void> removeSelectedSchedule(int index) async {
-    await _localService.removeSelectedSchedule(index);
+  Future<void> removeSelectedSchedule(int id) async {
+    await _localService.removeSelectedSchedule(id);
     loadSelected();
   }
 
@@ -331,7 +305,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildScheduleList() {
     return ListView.builder(
       padding: const EdgeInsets.only(top: 0, left: 20, right: 20, bottom: 20),
-      itemCount: selectedSchedules.length + 2, // +2 for notice accordion and powered by
+      itemCount:
+          selectedSchedules.length +
+          2, // +2 for notice accordion and powered by
       itemBuilder: (context, index) {
         // 마지막에서 두 번째 아이템은 안내사항 아코디언
         if (index == selectedSchedules.length) {
@@ -363,79 +339,20 @@ class _HomeScreenState extends State<HomeScreen> {
         final item = selectedSchedules[index];
         final dDay = calculateDDay(item.examDateTime);
         final dDayColor = getDDayColor(dDay);
-        final isFixedSuneung = item.id == -1; // 고정 수능인지 확인
-
-        // 고정 수능의 경우 Dismissible 없이 일반 Container로 반환
-        if (isFixedSuneung) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: AppTheme.cardShadow,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 학과 정보
-                      Expanded(
-                        child: Text(
-                          item.department,
-                          style: AppTheme.headingSmall.copyWith(
-                            fontSize: 22,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      // D-Day
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        child: Text(
-                          dDay,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 28,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // const SizedBox(height: 6),
-
-                  /// 시험일자
-                  Row(
-                    children: [
-                      Text(
-                        formatDate(item.examDateTime),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
+        final isSuneung = item.id == -1; // 수능인지 확인
 
         return Dismissible(
           key: Key(item.id.toString()),
           direction: DismissDirection.horizontal,
           confirmDismiss: (direction) async {
             if (direction == DismissDirection.endToStart) {
+              if (isSuneung) {
+                // 수능은 삭제 불가
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('수능 일정은 삭제할 수 없습니다')),
+                );
+                return false;
+              }
               return await showDialog<bool>(
                 context: context,
                 builder:
@@ -460,16 +377,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
               );
             } else if (direction == DismissDirection.startToEnd) {
+              // 고정/고정해제 (수능 포함)
               if (item.isPrimary) {
                 await _localService.unsetPrimarySchedule(item.id);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('대표 모집단위 설정을 해제했습니다')),
+                  SnackBar(content: Text('${item.department} 고정을 해제했습니다')),
                 );
               } else {
                 await _localService.setPrimarySchedule(item.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('${item.department}를 대표 모집단위로 설정했습니다'),
+                    content: Text(
+                      '${item.university} ${item.department}을 고정했습니다',
+                    ),
                   ),
                 );
               }
@@ -479,9 +399,9 @@ class _HomeScreenState extends State<HomeScreen> {
             return false;
           },
           onDismissed: (direction) async {
-            if (direction == DismissDirection.endToStart) {
-              // 수능이 아닌 경우에만 삭제 (수능은 index 0이므로 index-1로 조정)
-              await removeSelectedSchedule(index - 1);
+            if (direction == DismissDirection.endToStart && !isSuneung) {
+              // 수능이 아닌 경우에만 삭제 가능
+              await removeSelectedSchedule(item.id);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text("${item.university} ${item.department} 삭제됨"),
@@ -530,17 +450,21 @@ class _HomeScreenState extends State<HomeScreen> {
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20),
             decoration: BoxDecoration(
-              color: AppTheme.errorColor,
+              color: isSuneung ? Colors.grey : AppTheme.errorColor,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.delete_outline, color: Colors.white, size: 28),
-                SizedBox(height: 4),
+                Icon(
+                  isSuneung ? Icons.block : Icons.delete_outline,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                const SizedBox(height: 4),
                 Text(
-                  "삭제",
-                  style: TextStyle(
+                  isSuneung ? "삭제불가" : "삭제",
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -552,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Container(
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isSuneung ? AppTheme.primaryColor : Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: AppTheme.cardShadow,
               border: Border.all(
@@ -605,7 +529,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                     item.university,
                                     style: AppTheme.headingSmall.copyWith(
                                       fontSize: 18,
-                                      color: AppTheme.textSecondary,
+                                      color:
+                                          isSuneung
+                                              ? Colors.white
+                                              : AppTheme.textSecondary,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -617,6 +544,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                           item.department,
                                           style: AppTheme.headingSmall.copyWith(
                                             fontSize: 18,
+                                            color:
+                                                isSuneung
+                                                    ? Colors.white
+                                                    : AppTheme.textPrimary,
                                           ),
                                           maxLines: 2,
                                           overflow: TextOverflow.visible,
@@ -654,8 +585,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           child: Text(
                             dDay,
-                            style: const TextStyle(
-                              color: AppTheme.primaryColor,
+                            style: TextStyle(
+                              color:
+                                  isSuneung
+                                      ? Colors.white
+                                      : AppTheme.primaryColor,
                               fontWeight: FontWeight.w900,
                               fontSize: 28,
                               letterSpacing: 0.5,
@@ -673,10 +607,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         formatDate(item.examDateTime),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.textSecondary,
+                          color:
+                              isSuneung ? Colors.white : AppTheme.textSecondary,
                         ),
                       ),
                     ],

@@ -1,6 +1,8 @@
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/exam_schedule.dart';
 
 class WidgetService {
@@ -40,7 +42,7 @@ class WidgetService {
     }
   }
 
-  /// 위젯 데이터 업데이트 (iOS용 JSON 형태)
+  /// 위젯 데이터 업데이트 (iOS와 Android 모두 지원)
   static Future<void> _updateWidgetData(ExamSchedule exam) async {
     try {
       // iOS 위젯용 JSON 데이터 생성
@@ -77,6 +79,11 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>('exam_room', '');
       await HomeWidget.saveWidgetData<String>('days_left', daysLeft);
 
+      // Android 위젯을 위한 추가 데이터 저장
+      if (Platform.isAndroid) {
+        await _saveAndroidWidgetData([exam]);
+      }
+
       // 위젯 업데이트 트리거
       await HomeWidget.updateWidget(
         name: _widgetName,
@@ -100,6 +107,11 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>('exam_time', '');
       await HomeWidget.saveWidgetData<String>('exam_room', '');
       await HomeWidget.saveWidgetData<String>('days_left', '');
+
+      // Android 위젯 데이터도 초기화
+      if (Platform.isAndroid) {
+        await _saveAndroidWidgetData([]);
+      }
 
       // 위젯 업데이트 트리거
       await HomeWidget.updateWidget(
@@ -127,6 +139,38 @@ class WidgetService {
     // 가장 가까운 시험 찾기
     upcomingExams.sort((a, b) => a.examDateTime.compareTo(b.examDateTime));
     return upcomingExams.first;
+  }
+
+  /// Android 위젯을 위한 데이터 저장
+  static Future<void> _saveAndroidWidgetData(List<ExamSchedule> schedules) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      if (schedules.isNotEmpty) {
+        // JSON 배열로 변환
+        final jsonList = schedules.map((schedule) => {
+          'id': schedule.id,
+          'university': schedule.university,
+          'department': schedule.department,
+          'category': schedule.category,
+          'examDateTime': schedule.examDateTime.toIso8601String(),
+          'isPrimary': schedule.isPrimary,
+        }).toList();
+        
+        final jsonString = jsonEncode(jsonList);
+        
+        // Android 위젯이 읽을 수 있는 키로 저장
+        await prefs.setString('flutter.selectedSchedules', jsonString);
+        
+        print('Android 위젯 데이터 저장 완료: $jsonString');
+      } else {
+        // 빈 데이터 저장
+        await prefs.setString('flutter.selectedSchedules', '[]');
+        print('Android 위젯 데이터 초기화 완료');
+      }
+    } catch (e) {
+      print('Android 위젯 데이터 저장 실패: $e');
+    }
   }
 
   /// D-Day 계산
