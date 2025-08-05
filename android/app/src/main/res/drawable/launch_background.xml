@@ -4,12 +4,12 @@
     <!-- 배경색 -->
     <item android:drawable="@android:color/white" />
     
-    <!-- AIM 로고 (중앙, 작은 크기) -->
+    <!-- D-Day 앱 로고 (중앙, 작은 크기) -->
     <item android:gravity="center"
           android:width="20dp"
           android:height="20dp">
         <bitmap
-            android:src="@drawable/aim_logo"
+            android:src="@drawable/dday_app_logo"
             android:gravity="center" />
     </item>
 </layer-list>
