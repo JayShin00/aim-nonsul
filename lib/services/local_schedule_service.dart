@@ -6,12 +6,16 @@ import 'dart:convert';
 class LocalScheduleService {
   static const String _selectedSchedulesKey = 'selectedSchedules';
   static const String _firstLaunchKey = 'isFirstLaunch';
+  static const String _suneungPrimaryKey = 'suneungPrimary';
 
   // 선택된 일정들 불러오기 (수능 포함)
   Future<List<ExamSchedule>> loadSelectedSchedules() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonList = prefs.getStringList(_selectedSchedulesKey) ?? [];
     final userSchedules = jsonList.map((e) => ExamSchedule.fromMap(jsonDecode(e))).toList();
+    
+    // 수능 고정 상태 확인
+    final suneungPrimary = prefs.getBool(_suneungPrimaryKey) ?? false;
     
     // 수능이 이미 있는지 확인
     final hasSuneung = userSchedules.any((schedule) => schedule.id == -1);
@@ -24,9 +28,25 @@ class LocalScheduleService {
         department: '수능',
         category: '수능',
         examDateTime: DateTime(2025, 11, 13),
-        isPrimary: false,
+        isPrimary: suneungPrimary,
       );
       userSchedules.add(suneungExam);
+    } else {
+      // 수능이 있으면 고정 상태 업데이트
+      for (int i = 0; i < userSchedules.length; i++) {
+        if (userSchedules[i].id == -1) {
+          final schedule = userSchedules[i];
+          userSchedules[i] = ExamSchedule(
+            id: schedule.id,
+            university: schedule.university,
+            category: schedule.category,
+            department: schedule.department,
+            examDateTime: schedule.examDateTime,
+            isPrimary: suneungPrimary,
+          );
+          break;
+        }
+      }
     }
     
     // 날짜순으로 정렬
@@ -142,19 +162,39 @@ class LocalScheduleService {
 
   // 대표 모집단위 설정하기 (기존 대표는 해제)
   Future<void> setPrimarySchedule(int targetId) async {
+    final prefs = await SharedPreferences.getInstance();
     final existing = await loadSelectedSchedules();
 
-    // 모든 isPrimary를 false로 설정
-    for (int i = 0; i < existing.length; i++) {
-      final schedule = existing[i];
-      existing[i] = ExamSchedule(
-        id: schedule.id,
-        university: schedule.university,
-        category: schedule.category,
-        department: schedule.department,
-        examDateTime: schedule.examDateTime,
-        isPrimary: schedule.id == targetId, // 해당 ID만 true로 설정
-      );
+    if (targetId == -1) {
+      // 수능을 고정하는 경우
+      await prefs.setBool(_suneungPrimaryKey, true);
+      // 다른 일정들의 고정 해제
+      for (int i = 0; i < existing.length; i++) {
+        final schedule = existing[i];
+        existing[i] = ExamSchedule(
+          id: schedule.id,
+          university: schedule.university,
+          category: schedule.category,
+          department: schedule.department,
+          examDateTime: schedule.examDateTime,
+          isPrimary: schedule.id == -1, // 수능만 true
+        );
+      }
+    } else {
+      // 일반 일정을 고정하는 경우
+      await prefs.setBool(_suneungPrimaryKey, false); // 수능 고정 해제
+      // 모든 isPrimary를 false로 설정
+      for (int i = 0; i < existing.length; i++) {
+        final schedule = existing[i];
+        existing[i] = ExamSchedule(
+          id: schedule.id,
+          university: schedule.university,
+          category: schedule.category,
+          department: schedule.department,
+          examDateTime: schedule.examDateTime,
+          isPrimary: schedule.id == targetId, // 해당 ID만 true로 설정
+        );
+      }
     }
 
     // 업데이트된 목록 저장
@@ -163,7 +203,13 @@ class LocalScheduleService {
 
   // 대표 모집단위 해제하기
   Future<void> unsetPrimarySchedule(int targetId) async {
+    final prefs = await SharedPreferences.getInstance();
     final existing = await loadSelectedSchedules();
+
+    if (targetId == -1) {
+      // 수능 고정 해제
+      await prefs.setBool(_suneungPrimaryKey, false);
+    }
 
     // 해당 ID의 isPrimary를 false로 설정
     for (int i = 0; i < existing.length; i++) {
