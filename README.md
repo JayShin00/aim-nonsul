@@ -1,16 +1,30 @@
 # aim_nonsul
+College Scholastic Ability Test (CSAT) and Essay D-Day App
 
-A new Flutter project.
+## Branch Strategy
+Production branch- main
 
-## Getting Started
+Latest update branch- feat/#2-first-update
 
-This project is a starting point for a Flutter application.
+## Technology Stack
+Framework: Flutter 3.29.2, Dart 3.7.2, Material Design
 
-A few resources to get you started if this is your first Flutter project:
+Backend(BaaS): Firebase (Core, Cloud Firestore)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Home widget: Flutter home_widget + iOS WidgetKit(SwiftUI), Android AppWidget(Kotlin)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Firebase Settings
+- Project root path > Add New service account key file > Add the key value to the SERVICE_ACCOUNT_KEY_PATH variable in the upload_exam_schedule.py
+- Add the android/app/google-services.json file
+- Add the ios/Runner/GoogleService-Info.plist file
+
+## How to update data
+1. Modify the data in the assets/exam_schedule.csv file
+2. Execute the command after modification - python3 upload_exam_schedule.py
+
+## Caution
+- Make sure the service account key path and the CSV file path match
+
+## Contact us
+- Technical manager: kyle@aimscore.ai
+- Frontend developer: jay@aimscore.ai
