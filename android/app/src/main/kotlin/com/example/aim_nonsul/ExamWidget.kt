@@ -15,6 +15,7 @@ import android.graphics.Color
 import java.util.concurrent.TimeUnit
 import android.content.Intent
 import android.app.PendingIntent
+import android.content.ComponentName
 
 class ExamWidget : AppWidgetProvider() {
 
@@ -27,6 +28,64 @@ class ExamWidget : AppWidgetProvider() {
         
         Log.d("ExamWidget", "=== 안드로이드 위젯 업데이트 완료 ===")
     }
+    
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        
+        val action = intent.action
+        Log.d("ExamWidget", "onReceive 호출됨 - Action: $action")
+        
+        when (action) {
+            ACTION_NAVIGATE_NEXT -> {
+                handleCarouselNavigation(context, "next")
+            }
+            ACTION_NAVIGATE_PREVIOUS -> {
+                handleCarouselNavigation(context, "previous")
+            }
+        }
+    }
+    
+    private fun handleCarouselNavigation(context: Context, direction: String) {
+        try {
+            val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            
+            // Flutter의 selectedSchedules 데이터 로드
+            val selectedSchedulesJson = prefs.getString("flutter.flutter.selectedSchedules", null)
+            val currentIndex = prefs.getInt("flutter.current_index", 0)
+            
+            if (!selectedSchedulesJson.isNullOrEmpty() && selectedSchedulesJson != "[]") {
+                val schedulesArray = JSONArray(selectedSchedulesJson)
+                val totalCount = schedulesArray.length()
+                
+                if (totalCount > 1) {
+                    var newIndex = currentIndex
+                    if (direction == "next") {
+                        newIndex = (currentIndex + 1) % totalCount
+                    } else if (direction == "previous") {
+                        newIndex = if (currentIndex == 0) totalCount - 1 else currentIndex - 1
+                    }
+                    
+                    // 새로운 인덱스 저장
+                    prefs.edit()
+                        .putInt("flutter.current_index", newIndex)
+                        .apply()
+                    
+                    Log.d("ExamWidget", "Carousel 네비게이션: $direction -> 인덱스 $currentIndex -> $newIndex")
+                    
+                    // 모든 위젯 업데이트
+                    val appWidgetManager = AppWidgetManager.getInstance(context)
+                    val thisWidget = ComponentName(context, ExamWidget::class.java)
+                    val appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget)
+                    
+                    for (appWidgetId in appWidgetIds) {
+                        updateAppWidget(context, appWidgetManager, appWidgetId)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("ExamWidget", "Carousel 네비게이션 오류", e)
+        }
+    }
 
     override fun onEnabled(context: Context) {
         Log.d("ExamWidget", "위젯이 활성화됨")
@@ -37,46 +96,31 @@ class ExamWidget : AppWidgetProvider() {
     }
 
     companion object {
+        const val ACTION_NAVIGATE_NEXT = "com.example.aim_nonsul.ACTION_NAVIGATE_NEXT"
+        const val ACTION_NAVIGATE_PREVIOUS = "com.example.aim_nonsul.ACTION_NAVIGATE_PREVIOUS"
+        const val EXTRA_APPWIDGET_ID = "appwidget_id"
+        
         fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             Log.d("ExamWidget", "updateAppWidget 호출됨, ID: $appWidgetId")
             
-            val views = RemoteViews(context.packageName, R.layout.exam_widget)
+            val views = RemoteViews(context.packageName, R.layout.carousel_widget)
             
             try {
                 // SharedPreferences에서 데이터 읽기
                 val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                // Flutter가 실제로 저장하는 키는 "flutter.flutter.selectedSchedules"입니다
                 val selectedSchedulesJson = prefs.getString("flutter.flutter.selectedSchedules", null)
+                val currentIndex = prefs.getInt("flutter.current_index", 0)
+                val totalCount = prefs.getInt("flutter.total_count", 0)
                 
-                Log.d("ExamWidget", "SharedPreferences 데이터: $selectedSchedulesJson")
-                
-                // 저장된 모든 키 확인 (디버깅용)
-                val allKeys = prefs.all
-                Log.d("ExamWidget", "=== 저장된 모든 키들 ===")
-                for ((key, value) in allKeys) {
-                    Log.d("ExamWidget", "키: '$key' → 값: '$value'")
-                }
-                Log.d("ExamWidget", "=== 키 목록 끝 ===")
-                
-                // 특정 키들도 직접 확인
-                Log.d("ExamWidget", "직접 확인:")
-                Log.d("ExamWidget", "flutter.selectedSchedules = ${prefs.getString("flutter.selectedSchedules", "NULL")}")
-                Log.d("ExamWidget", "selectedSchedules = ${prefs.getString("selectedSchedules", "NULL")}")
-                Log.d("ExamWidget", "StringList selectedSchedules = ${prefs.getStringSet("selectedSchedules", null)}")
+                Log.d("ExamWidget", "Carousel 데이터 - JSON: $selectedSchedulesJson, Index: $currentIndex, Total: $totalCount")
                 
                 if (selectedSchedulesJson != null && selectedSchedulesJson.isNotEmpty() && selectedSchedulesJson != "[]") {
                     val schedulesArray = JSONArray(selectedSchedulesJson)
                     
                     if (schedulesArray.length() > 0) {
-                        // isPrimary가 true인 일정을 우선 선택, 없으면 첫 번째 일정 사용
-                        var schedule = schedulesArray.getJSONObject(0)
-                        for (i in 0 until schedulesArray.length()) {
-                            val currentSchedule = schedulesArray.getJSONObject(i)
-                            if (currentSchedule.optBoolean("isPrimary", false)) {
-                                schedule = currentSchedule
-                                break
-                            }
-                        }
+                        // 현재 인덱스에 해당하는 일정 선택
+                        val validIndex = if (currentIndex < schedulesArray.length()) currentIndex else 0
+                        val schedule = schedulesArray.getJSONObject(validIndex)
                         
                         val university = schedule.optString("university", "")
                         val department = schedule.optString("department", "")
@@ -94,6 +138,7 @@ class ExamWidget : AppWidgetProvider() {
                             
                             // 일정 데이터 표시
                             views.setViewVisibility(R.id.empty_layout, View.GONE)
+                            views.setViewVisibility(R.id.content_container, View.VISIBLE)
                             
                             // 헤더
                             views.setViewVisibility(R.id.star_indicator, if (isPrimary) View.VISIBLE else View.GONE)
@@ -112,6 +157,50 @@ class ExamWidget : AppWidgetProvider() {
                             // D-Day에 따른 색상 설정 (iOS와 동일하게)
                             val dDayColor = if (dDay <= 0) "#6C757D" else "#D63384"
                             views.setInt(R.id.dday_badge, "setTextColor", android.graphics.Color.parseColor(dDayColor))
+                            
+                            // 네비게이션 버튼 및 페이지 인디케이터 설정
+                            val actualTotalCount = schedulesArray.length()
+                            if (actualTotalCount > 1) {
+                                // 페이지 인디케이터 표시
+                                views.setViewVisibility(R.id.page_indicator, View.VISIBLE)
+                                views.setTextViewText(R.id.page_indicator, "${validIndex + 1}/$actualTotalCount")
+                                
+                                // 네비게이션 버튼 표시 및 클릭 이벤트 설정
+                                views.setViewVisibility(R.id.nav_previous, View.VISIBLE)
+                                views.setViewVisibility(R.id.nav_next, View.VISIBLE)
+                                
+                                // 이전 버튼 PendingIntent
+                                val previousIntent = Intent(context, ExamWidget::class.java).apply {
+                                    action = ACTION_NAVIGATE_PREVIOUS
+                                    putExtra(EXTRA_APPWIDGET_ID, appWidgetId)
+                                }
+                                val previousPendingIntent = PendingIntent.getBroadcast(
+                                    context,
+                                    appWidgetId * 100 + 1, // 고유 request code
+                                    previousIntent,
+                                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                                )
+                                views.setOnClickPendingIntent(R.id.nav_previous, previousPendingIntent)
+                                
+                                // 다음 버튼 PendingIntent
+                                val nextIntent = Intent(context, ExamWidget::class.java).apply {
+                                    action = ACTION_NAVIGATE_NEXT
+                                    putExtra(EXTRA_APPWIDGET_ID, appWidgetId)
+                                }
+                                val nextPendingIntent = PendingIntent.getBroadcast(
+                                    context,
+                                    appWidgetId * 100 + 2, // 고유 request code
+                                    nextIntent,
+                                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                                )
+                                views.setOnClickPendingIntent(R.id.nav_next, nextPendingIntent)
+                                
+                            } else {
+                                // 단일 항목인 경우 네비게이션 버튼 숨기기
+                                views.setViewVisibility(R.id.nav_previous, View.GONE)
+                                views.setViewVisibility(R.id.nav_next, View.GONE)
+                                views.setViewVisibility(R.id.page_indicator, View.GONE)
+                            }
                             
                         } else {
                             Log.d("ExamWidget", "필수 데이터가 누락됨")
@@ -154,11 +243,9 @@ class ExamWidget : AppWidgetProvider() {
         private fun showEmptyState(views: RemoteViews) {
             Log.d("ExamWidget", "빈 상태 표시")
             views.setViewVisibility(R.id.empty_layout, View.VISIBLE)
-            views.setViewVisibility(R.id.star_indicator, View.GONE)
-            views.setTextViewText(R.id.university_name, "")
-            views.setTextViewText(R.id.department_name, "")
-            views.setTextViewText(R.id.exam_date, "")
-            views.setTextViewText(R.id.dday_badge, "")
+            views.setViewVisibility(R.id.content_container, View.GONE)
+            views.setViewVisibility(R.id.nav_previous, View.GONE)
+            views.setViewVisibility(R.id.nav_next, View.GONE)
         }
         
         private fun calculateDDay(examDateTimeStr: String): Int {
@@ -205,4 +292,4 @@ class ExamWidget : AppWidgetProvider() {
             }
         }
     }
-} 
+}
