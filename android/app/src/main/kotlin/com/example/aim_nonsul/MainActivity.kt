@@ -28,6 +28,15 @@ class MainActivity : FlutterActivity() {
                     updateAllWidgets(this)
                     result.success(null)
                 }
+                "setAutoScrollEnabled" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    setAutoScrollEnabled(this, enabled)
+                    result.success(null)
+                }
+                "getAutoScrollEnabled" -> {
+                    val enabled = getAutoScrollEnabled(this)
+                    result.success(enabled)
+                }
                 else -> {
                     result.notImplemented()
                 }
@@ -80,5 +89,25 @@ class MainActivity : FlutterActivity() {
         examIntent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
         examIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, examWidgetIds)
         context.sendBroadcast(examIntent)
+    }
+    
+    private fun setAutoScrollEnabled(context: Context, enabled: Boolean) {
+        // Save preference
+        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+        prefs.edit()
+            .putBoolean("auto_scroll_enabled", enabled)
+            .apply()
+        
+        // Send broadcast to toggle auto-scroll
+        val toggleIntent = Intent(context, ExamWidget::class.java)
+        toggleIntent.action = "com.example.aim_nonsul.ACTION_TOGGLE_AUTO_SCROLL"
+        context.sendBroadcast(toggleIntent)
+        
+        Log.d(TAG, "Auto-scroll set to: $enabled")
+    }
+    
+    private fun getAutoScrollEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+        return prefs.getBoolean("auto_scroll_enabled", true)
     }
 }

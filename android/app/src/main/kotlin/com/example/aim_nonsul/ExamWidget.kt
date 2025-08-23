@@ -17,6 +17,9 @@ import android.content.Intent
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.widget.LinearLayout
+import android.app.AlarmManager
+import android.os.SystemClock
+import android.os.Build
 
 class ExamWidget : AppWidgetProvider() {
 
@@ -25,6 +28,13 @@ class ExamWidget : AppWidgetProvider() {
         
         for (appWidgetId in appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId)
+        }
+        
+        // Start auto-scroll if enabled
+        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+        val autoScrollEnabled = prefs.getBoolean("auto_scroll_enabled", true) // Default to enabled
+        if (autoScrollEnabled && appWidgetIds.isNotEmpty()) {
+            startAutoScroll(context)
         }
         
         Log.d("ExamWidget", "=== 안드로이드 위젯 업데이트 완료 ===")
@@ -38,15 +48,26 @@ class ExamWidget : AppWidgetProvider() {
         
         when (action) {
             ACTION_NAVIGATE_NEXT -> {
-                handleCarouselNavigation(context, "next")
+                handleCarouselNavigation(context, "next", false)
             }
             ACTION_NAVIGATE_PREVIOUS -> {
-                handleCarouselNavigation(context, "previous")
+                handleCarouselNavigation(context, "previous", false)
+            }
+            ACTION_AUTO_SCROLL -> {
+                handleCarouselNavigation(context, "next", true)
+                // Reschedule next auto-scroll
+                val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+                if (prefs.getBoolean("auto_scroll_enabled", true)) {
+                    scheduleNextAutoScroll(context)
+                }
+            }
+            ACTION_TOGGLE_AUTO_SCROLL -> {
+                toggleAutoScroll(context)
             }
         }
     }
     
-    private fun handleCarouselNavigation(context: Context, direction: String) {
+    private fun handleCarouselNavigation(context: Context, direction: String, isAutoScroll: Boolean = false) {
         try {
             val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
             
@@ -71,7 +92,17 @@ class ExamWidget : AppWidgetProvider() {
                         .putInt("current_index", newIndex)
                         .apply()
                     
-                    Log.d("ExamWidget", "Carousel 네비게이션: $direction -> 인덱스 $currentIndex -> $newIndex")
+                    // If this is manual navigation, stop auto-scroll temporarily
+                    if (!isAutoScroll) {
+                        // Stop auto-scroll for manual navigation
+                        cancelAutoScroll(context)
+                        // Restart auto-scroll after a delay (5 seconds)
+                        if (prefs.getBoolean("auto_scroll_enabled", true)) {
+                            scheduleAutoScrollRestart(context, 5000)
+                        }
+                    }
+                    
+                    Log.d("ExamWidget", "Carousel 네비게이션: $direction -> 인덱스 $currentIndex -> $newIndex (Auto: $isAutoScroll)")
                     
                     // 모든 위젯 업데이트
                     val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -90,16 +121,150 @@ class ExamWidget : AppWidgetProvider() {
 
     override fun onEnabled(context: Context) {
         Log.d("ExamWidget", "위젯이 활성화됨")
+        // Start auto-scroll when first widget is added
+        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("auto_scroll_enabled", true)) {
+            startAutoScroll(context)
+        }
     }
 
     override fun onDisabled(context: Context) {
         Log.d("ExamWidget", "위젯이 비활성화됨")
+        // Cancel auto-scroll when last widget is removed
+        cancelAutoScroll(context)
+    }
+    
+    private fun startAutoScroll(context: Context) {
+        Log.d("ExamWidget", "Auto-scroll 시작")
+        scheduleNextAutoScroll(context)
+    }
+    
+    private fun scheduleNextAutoScroll(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, ExamWidget::class.java).apply {
+            action = ACTION_AUTO_SCROLL
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            AUTO_SCROLL_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val triggerTime = SystemClock.elapsedRealtime() + 2000
+        
+        try {
+            // Try to use exact alarm first (more precise timing)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                )
+                Log.d("ExamWidget", "다음 auto-scroll 예약됨 (정확한 알람, 2초 후)")
+            } else {
+                alarmManager.setExact(
+                    AlarmManager.ELAPSED_REALTIME,
+                    triggerTime,
+                    pendingIntent
+                )
+                Log.d("ExamWidget", "다음 auto-scroll 예약됨 (정확한 알람, 2초 후)")
+            }
+        } catch (e: SecurityException) {
+            // Fallback to inexact alarm if exact alarm permission is not granted
+            Log.w("ExamWidget", "정확한 알람 권한이 없음, 부정확한 알람 사용: ${e.message}")
+            alarmManager.set(
+                AlarmManager.ELAPSED_REALTIME,
+                triggerTime,
+                pendingIntent
+            )
+            Log.d("ExamWidget", "다음 auto-scroll 예약됨 (부정확한 알람, 2초 후)")
+        }
+    }
+    
+    private fun scheduleAutoScrollRestart(context: Context, delayMillis: Long) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, ExamWidget::class.java).apply {
+            action = ACTION_AUTO_SCROLL
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            AUTO_SCROLL_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        val triggerTime = SystemClock.elapsedRealtime() + delayMillis
+        
+        try {
+            // Try to use exact alarm first
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setExact(
+                    AlarmManager.ELAPSED_REALTIME,
+                    triggerTime,
+                    pendingIntent
+                )
+            }
+            Log.d("ExamWidget", "Auto-scroll 재시작 예약됨 (정확한 알람, ${delayMillis/1000}초 후)")
+        } catch (e: SecurityException) {
+            // Fallback to inexact alarm
+            Log.w("ExamWidget", "정확한 알람 권한이 없음, 부정확한 알람 사용: ${e.message}")
+            alarmManager.set(
+                AlarmManager.ELAPSED_REALTIME,
+                triggerTime,
+                pendingIntent
+            )
+            Log.d("ExamWidget", "Auto-scroll 재시작 예약됨 (부정확한 알람, ${delayMillis/1000}초 후)")
+        }
+    }
+    
+    private fun cancelAutoScroll(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, ExamWidget::class.java).apply {
+            action = ACTION_AUTO_SCROLL
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            AUTO_SCROLL_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        alarmManager.cancel(pendingIntent)
+        Log.d("ExamWidget", "Auto-scroll 취소됨")
+    }
+    
+    private fun toggleAutoScroll(context: Context) {
+        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+        val currentEnabled = prefs.getBoolean("auto_scroll_enabled", true)
+        val newEnabled = !currentEnabled
+        
+        prefs.edit()
+            .putBoolean("auto_scroll_enabled", newEnabled)
+            .apply()
+        
+        if (newEnabled) {
+            startAutoScroll(context)
+            Log.d("ExamWidget", "Auto-scroll 활성화됨")
+        } else {
+            cancelAutoScroll(context)
+            Log.d("ExamWidget", "Auto-scroll 비활성화됨")
+        }
     }
 
     companion object {
         const val ACTION_NAVIGATE_NEXT = "com.example.aim_nonsul.ACTION_NAVIGATE_NEXT"
         const val ACTION_NAVIGATE_PREVIOUS = "com.example.aim_nonsul.ACTION_NAVIGATE_PREVIOUS"
+        const val ACTION_AUTO_SCROLL = "com.example.aim_nonsul.ACTION_AUTO_SCROLL"
+        const val ACTION_TOGGLE_AUTO_SCROLL = "com.example.aim_nonsul.ACTION_TOGGLE_AUTO_SCROLL"
         const val EXTRA_APPWIDGET_ID = "appwidget_id"
+        const val AUTO_SCROLL_REQUEST_CODE = 9999
         
         fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
             Log.d("ExamWidget", "updateAppWidget 호출됨, ID: $appWidgetId")
