@@ -2,9 +2,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aim_nonsul/models/exam_schedule.dart';
 import 'package:aim_nonsul/services/widget_service.dart';
 import 'package:aim_nonsul/services/notification_service.dart';
+import 'package:aim_nonsul/services/background_notification_service.dart';
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/services.dart';
 
 class LocalScheduleService {
   static const String _selectedSchedulesKey = 'selectedSchedules';
@@ -190,7 +189,10 @@ class LocalScheduleService {
       final isNotificationEnabled = await notificationService.areNotificationsEnabled();
       
       if (isNotificationEnabled) {
+        // 즉시 업데이트
         await notificationService.showDDayNotification();
+        // 백그라운드 업데이트 트리거
+        BackgroundNotificationService.triggerUpdate();
       }
     } catch (e) {
       print('알림 업데이트 실패: $e');

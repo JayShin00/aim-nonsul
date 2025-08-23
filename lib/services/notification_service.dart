@@ -15,7 +15,11 @@ class NotificationService {
   static const String _channelId = 'exam_dday_channel';
   static const String _channelName = 'Exam D-Day Notifications';
   static const String _channelDescription = 'Persistent notifications showing exam D-Day countdown';
-  static const int _notificationId = 1000;
+  static const String _summaryChannelId = 'exam_summary_channel';
+  static const String _summaryChannelName = 'Exam Summary';
+  static const String _groupKey = 'com.aim.aimNonsul.EXAM_NOTIFICATIONS';
+  static const int _summaryNotificationId = 1000;
+  static const int _baseNotificationId = 1001;
 
   /// Initialize the notification service
   Future<void> initialize() async {
@@ -43,8 +47,11 @@ class NotificationService {
     await _createNotificationChannel();
   }
 
-  /// Create Android notification channel
+  /// Create Android notification channels
   Future<void> _createNotificationChannel() async {
+    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    
+    // Main notification channel
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       _channelId,
       _channelName,
@@ -55,8 +62,19 @@ class NotificationService {
       enableLights: true,
     );
 
-    await _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+    // Summary notification channel
+    const AndroidNotificationChannel summaryChannel = AndroidNotificationChannel(
+      _summaryChannelId,
+      _summaryChannelName,
+      description: 'Summary of exam notifications',
+      importance: Importance.high,
+      showBadge: true,
+      enableVibration: false,
+      enableLights: true,
+    );
+
+    await androidPlugin?.createNotificationChannel(channel);
+    await androidPlugin?.createNotificationChannel(summaryChannel);
   }
 
   /// Handle notification tap
@@ -77,7 +95,7 @@ class NotificationService {
     return granted ?? false;
   }
 
-  /// Show or update the D-Day notification
+  /// Show or update multiple D-Day notifications (one per exam)
   Future<void> showDDayNotification() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -88,102 +106,81 @@ class NotificationService {
       if (kDebugMode) {
         print('=== Notification Service Debug ===');
         print('selectedSchedulesJsonList: $selectedSchedulesJsonList');
-        
-        // Print all SharedPreferences keys for debugging
-        final allKeys = prefs.getKeys();
-        print('All SharedPreferences keys:');
-        for (String key in allKeys) {
-          print('  $key: ${prefs.get(key)}');
-        }
       }
       
       if (selectedSchedulesJsonList.isEmpty) {
-        // No schedules selected, hide notification
+        // No schedules selected, hide all notifications
         if (kDebugMode) {
-          print('No schedules found, canceling notification');
+          print('No schedules found, canceling all notifications');
         }
-        await cancelDDayNotification();
+        await cancelAllDDayNotifications();
         return;
       }
 
       // Convert StringList to actual ExamSchedule objects
-      final schedules = selectedSchedulesJsonList.map((jsonString) {
+      final scheduleMaps = selectedSchedulesJsonList.map((jsonString) {
         return jsonDecode(jsonString);
       }).toList();
-      if (schedules.isEmpty) {
-        await cancelDDayNotification();
+      
+      if (scheduleMaps.isEmpty) {
+        await cancelAllDDayNotifications();
         return;
       }
 
-      // Find primary schedule or use first one
-      Map<String, dynamic> selectedScheduleJson = schedules.first;
-      for (var schedule in schedules) {
-        if (schedule['isPrimary'] == true) {
-          selectedScheduleJson = schedule;
-          break;
-        }
-      }
-
-      final schedule = ExamSchedule.fromMap(selectedScheduleJson);
+      final schedules = scheduleMaps.map((map) => ExamSchedule.fromMap(map)).toList();
       
-      // Calculate D-Day
-      final now = DateTime.now();
-      final examDate = schedule.examDateTime;
-      final daysUntilExam = examDate.difference(DateTime(now.year, now.month, now.day)).inDays;
+      // Sort schedules by exam date
+      schedules.sort((a, b) => a.examDateTime.compareTo(b.examDateTime));
       
-      String dDayText;
-      if (daysUntilExam == 0) {
-        dDayText = 'D-Day';
-      } else if (daysUntilExam < 0) {
-        dDayText = '종료';
-      } else {
-        dDayText = 'D-$daysUntilExam';
-      }
-
-      // Format exam date
-      final formattedDate = DateFormat('yyyy.MM.dd').format(schedule.examDateTime);
-      
-      // Create notification
-      if (kDebugMode) {
-        print('Creating notification: $dDayText for ${schedule.university} ${schedule.department}');
+      // Create individual notifications for each exam
+      for (int i = 0; i < schedules.length; i++) {
+        final schedule = schedules[i];
+        await _showIndividualNotification(schedule, i);
       }
       
-      await _showPersistentNotification(
-        dDayText: dDayText,
-        university: schedule.university,
-        department: schedule.department,
-        examDate: formattedDate,
-        isPrimary: schedule.isPrimary,
-      );
+      // Create summary notification if there are multiple exams
+      if (schedules.length > 1) {
+        await _showSummaryNotification(schedules);
+      }
       
       if (kDebugMode) {
-        print('Notification created successfully');
+        print('Created ${schedules.length} individual notifications');
       }
 
     } catch (e) {
       if (kDebugMode) {
-        print('Error showing D-Day notification: $e');
+        print('Error showing D-Day notifications: $e');
       }
     }
   }
 
-  /// Show persistent notification with exam info
-  Future<void> _showPersistentNotification({
-    required String dDayText,
-    required String university,
-    required String department,
-    required String examDate,
-    required bool isPrimary,
-  }) async {
-    // Clean department name (remove star if present)
-    final cleanDepartment = department.replaceAll('⭐ ', '');
+  /// Show individual notification for a single exam
+  Future<void> _showIndividualNotification(ExamSchedule schedule, int index) async {
+    // Calculate D-Day
+    final now = DateTime.now();
+    final examDate = schedule.examDateTime;
+    final daysUntilExam = examDate.difference(DateTime(now.year, now.month, now.day)).inDays;
     
-    // Create big text style with exam details
-    final String bigText = '$university\n$cleanDepartment\n시험일: $examDate';
-    
-    // Notification title with D-Day and star if primary
-    final String title = isPrimary ? '$dDayText ⭐ AIM 논술' : '$dDayText AIM 논술';
+    String dDayText;
+    if (daysUntilExam == 0) {
+      dDayText = 'D-Day';
+    } else if (daysUntilExam < 0) {
+      dDayText = '종료';
+    } else {
+      dDayText = 'D-$daysUntilExam';
+    }
 
+    // Format exam date
+    final formattedDate = DateFormat('yyyy.MM.dd').format(schedule.examDateTime);
+    
+    // Clean department name (remove star if present)
+    final cleanDepartment = schedule.department.replaceAll('⭐ ', '');
+    
+    // Create notification content
+    final String title = schedule.isPrimary ? '$dDayText ⭐ ${schedule.university}' : '$dDayText ${schedule.university}';
+    final String body = '$cleanDepartment • $formattedDate';
+    final String bigText = '${schedule.university}\\n$cleanDepartment\\n시험일: $formattedDate\\n\\n남은 일수: $dDayText';
+    
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       _channelId,
       _channelName,
@@ -194,9 +191,10 @@ class NotificationService {
       autoCancel: false, // Prevents swipe to dismiss
       showWhen: false,
       category: AndroidNotificationCategory.reminder,
-      visibility: NotificationVisibility.public, // Shows on lock screen
+      visibility: NotificationVisibility.public, // Shows full content on lock screen
       color: const Color(0xFFD63384), // AIM Pink color
       colorized: true,
+      groupKey: _groupKey, // Group notifications together
       styleInformation: BigTextStyleInformation(
         bigText,
         htmlFormatBigText: false,
@@ -211,10 +209,81 @@ class NotificationService {
           '앱 열기',
           showsUserInterface: true,
         ),
+      ],
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: false,
+      interruptionLevel: InterruptionLevel.active,
+    );
+
+    final NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final notificationId = _baseNotificationId + index;
+    await _notifications.show(
+      notificationId,
+      title,
+      body,
+      details,
+    );
+  }
+
+  /// Show summary notification when there are multiple exams
+  Future<void> _showSummaryNotification(List<ExamSchedule> schedules) async {
+    // Create summary of all exams
+    final buffer = StringBuffer();
+    for (final schedule in schedules) {
+      final now = DateTime.now();
+      final examDate = schedule.examDateTime;
+      final daysUntilExam = examDate.difference(DateTime(now.year, now.month, now.day)).inDays;
+      
+      String dDayText;
+      if (daysUntilExam == 0) {
+        dDayText = 'D-Day';
+      } else if (daysUntilExam < 0) {
+        dDayText = '종료';
+      } else {
+        dDayText = 'D-$daysUntilExam';
+      }
+      
+      final cleanDepartment = schedule.department.replaceAll('⭐ ', '');
+      final star = schedule.isPrimary ? '⭐ ' : '';
+      buffer.writeln('$star${schedule.university} $cleanDepartment ($dDayText)');
+    }
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      _summaryChannelId,
+      _summaryChannelName,
+      channelDescription: 'Summary of all exam notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+      ongoing: true,
+      autoCancel: false,
+      showWhen: false,
+      category: AndroidNotificationCategory.reminder,
+      visibility: NotificationVisibility.public,
+      color: const Color(0xFFD63384),
+      colorized: true,
+      groupKey: _groupKey,
+      setAsGroupSummary: true, // This makes it the summary notification
+      styleInformation: BigTextStyleInformation(
+        buffer.toString().trim(),
+        htmlFormatBigText: false,
+        contentTitle: 'AIM 논술 D-Day (${schedules.length}개 시험)',
+        htmlFormatContentTitle: false,
+        summaryText: '모든 시험 일정',
+        htmlFormatSummaryText: false,
+      ),
+      actions: const <AndroidNotificationAction>[
         AndroidNotificationAction(
-          'dismiss',
-          '해제',
-          cancelNotification: true,
+          'open_app',
+          '앱 열기',
+          showsUserInterface: true,
         ),
       ],
     );
@@ -232,16 +301,27 @@ class NotificationService {
     );
 
     await _notifications.show(
-      _notificationId,
-      title,
-      university,
+      _summaryNotificationId,
+      'AIM 논술 D-Day',
+      '${schedules.length}개 시험 일정',
       details,
     );
   }
 
-  /// Cancel the D-Day notification
+  /// Cancel all D-Day notifications
+  Future<void> cancelAllDDayNotifications() async {
+    // Cancel summary notification
+    await _notifications.cancel(_summaryNotificationId);
+    
+    // Cancel all individual notifications (assuming max 50 notifications)
+    for (int i = 0; i < 50; i++) {
+      await _notifications.cancel(_baseNotificationId + i);
+    }
+  }
+
+  /// Cancel the old single D-Day notification (for backwards compatibility)
   Future<void> cancelDDayNotification() async {
-    await _notifications.cancel(_notificationId);
+    await cancelAllDDayNotifications();
   }
 
   /// Check if notifications are enabled
@@ -258,7 +338,7 @@ class NotificationService {
     if (enabled) {
       await showDDayNotification();
     } else {
-      await cancelDDayNotification();
+      await cancelAllDDayNotifications();
     }
   }
 

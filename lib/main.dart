@@ -5,6 +5,9 @@ import 'package:aim_nonsul/screens/home_screen.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:aim_nonsul/services/notification_service.dart';
+import 'package:aim_nonsul/services/background_notification_service.dart';
+
+// Auto-scrolling widgets don't need interactive callbacks
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,14 +20,39 @@ void main() async {
   // Home Widget App Group ID 설정
   await HomeWidget.setAppGroupId('group.com.aim.aimNonsul');
 
-  // Notification Service 초기화
+  // Notification Services 초기화
   await NotificationService().initialize();
+  await BackgroundNotificationService.initialize();
 
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    BackgroundNotificationService.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    BackgroundNotificationService.onAppLifecycleChanged(state);
+  }
 
   @override
   Widget build(BuildContext context) {
