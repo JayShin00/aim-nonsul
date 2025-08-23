@@ -11,8 +11,10 @@ class WidgetService {
   /// 위젯 업데이트 (Carousel 지원)
   static Future<void> updateWidget(List<ExamSchedule> examList) async {
     try {
+      print('WidgetService.updateWidget 호출됨: ${examList.length}개 시험');
+      
       if (examList.isEmpty) {
-        // 시험이 없는 경우
+        print('시험 목록이 비어있어 위젯 데이터를 초기화합니다');
         await _clearWidgetData();
         return;
       }
@@ -22,7 +24,10 @@ class WidgetService {
           .where((exam) => exam.examDateTime.isAfter(DateTime.now()))
           .toList();
 
+      print('미래 시험 ${upcomingExams.length}개 필터링됨');
+
       if (upcomingExams.isEmpty) {
+        print('미래 시험이 없어 위젯 데이터를 초기화합니다');
         await _clearWidgetData();
         return;
       }
@@ -33,11 +38,18 @@ class WidgetService {
           ? currentIndex 
           : 0;
       
+      print('현재 인덱스: $currentIndex -> 유효한 인덱스: $validIndex');
+      
       // carousel index 저장
       await _saveCurrentCarouselIndex(validIndex);
       
       // 전체 시험 목록과 현재 인덱스로 위젯 업데이트
       await _updateCarouselWidgetData(upcomingExams, validIndex);
+      
+      // Android 위젯을 위한 추가 데이터 저장 (Android 네이티브 위젯이 읽을 수 있도록)
+      await _saveAndroidWidgetData(upcomingExams, validIndex);
+      
+      print('WidgetService.updateWidget 완료');
     } catch (e) {
       print('위젯 업데이트 중 오류 발생: $e');
       // 오류 발생 시 기본 데이터로 초기화
@@ -116,9 +128,41 @@ class WidgetService {
     }
   }
 
+  /// Android 위젯 데이터 저장 (네이티브 위젯이 읽을 수 있도록)
+  static Future<void> _saveAndroidWidgetData(List<ExamSchedule> examList, int currentIndex) async {
+    try {
+      print('Android 위젯 데이터 저장 시작');
+      
+      // JSON으로 시험 목록 변환
+      final examListData = examList.map((exam) => {
+        'university': exam.university.isNotEmpty ? exam.university : '대학명 없음',
+        'department': exam.department.isNotEmpty ? exam.department : '학과명 없음',
+        'category': exam.category,
+        'examDateTime': exam.examDateTime.toIso8601String(),
+        'isPrimary': exam.isPrimary,
+        'id': exam.id,
+      }).toList();
+      
+      final jsonString = jsonEncode(examListData);
+      
+      // Flutter SharedPreferences를 통해 Android 위젯이 접근할 수 있는 키에 저장
+      // Android 위젯은 flutter.flutter.flutter.selectedSchedules 키로 읽음
+      await HomeWidget.saveWidgetData<String>('flutter.selectedSchedules', jsonString);
+      await HomeWidget.saveWidgetData<int>('current_index', currentIndex);
+      await HomeWidget.saveWidgetData<int>('total_count', examList.length);
+      
+      print('Android 위젯 데이터 저장 완료: ${examList.length}개 시험, 현재 인덱스: $currentIndex');
+    } catch (e) {
+      print('Android 위젯 데이터 저장 실패: $e');
+    }
+  }
+
   /// 위젯 데이터 초기화
   static Future<void> _clearWidgetData() async {
     try {
+      print('위젯 데이터 초기화 시작');
+      
+      // iOS 위젯 데이터 초기화
       await HomeWidget.saveWidgetData<String>('carousel_data', '');
       await HomeWidget.saveWidgetData<String>('exam_title', '등록된 시험이 없습니다');
       await HomeWidget.saveWidgetData<String>('exam_university', '');
@@ -128,6 +172,9 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>('days_left', '');
       await HomeWidget.saveWidgetData<int>('current_index', 0);
       await HomeWidget.saveWidgetData<int>('total_count', 0);
+      
+      // Android 위젯 데이터 초기화
+      await HomeWidget.saveWidgetData<String>('flutter.selectedSchedules', '[]');
 
       // 위젯 업데이트 트리거 (기존 XML 위젯과 새로운 Glance 위젯 모두 업데이트)
       await HomeWidget.updateWidget(
@@ -143,6 +190,8 @@ class WidgetService {
         androidName: 'ExamGlanceWidgetReceiver',
         qualifiedAndroidName: 'com.example.aim_nonsul.ExamGlanceWidgetReceiver',
       );
+      
+      print('위젯 데이터 초기화 완료');
     } catch (e) {
       print('위젯 데이터 초기화 실패: $e');
     }

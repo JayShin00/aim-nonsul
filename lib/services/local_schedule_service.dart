@@ -106,106 +106,15 @@ class LocalScheduleService {
 
   // 플랫폼별 위젯 업데이트
   Future<void> _updateAllWidgets(List<ExamSchedule> schedules) async {
-    if (Platform.isIOS) {
-      // iOS 위젯 업데이트
-      await WidgetService.updateWidget(schedules);
-    } else if (Platform.isAndroid) {
-      // Android 위젯 업데이트 (SharedPreferences를 통해)
-      await _updateAndroidWidget(schedules);
-    }
+    print('LocalScheduleService._updateAllWidgets 호출됨: ${schedules.length}개 스케줄');
+    
+    // WidgetService를 통해 통합 위젯 업데이트 (iOS, Android 모두)
+    await WidgetService.updateWidget(schedules);
     
     // 알림 업데이트 (모든 플랫폼)
     await _updateNotifications();
   }
 
-  // Android 위젯 데이터 업데이트
-  Future<void> _updateAndroidWidget(List<ExamSchedule> schedules) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      if (schedules.isNotEmpty) {
-        // 미래 시험만 필터링
-        final upcomingExams = schedules
-            .where((exam) => exam.examDateTime.isAfter(DateTime.now()))
-            .toList();
-        
-        if (upcomingExams.isNotEmpty) {
-          final jsonList = upcomingExams.map((e) => e.toMap()).toList();
-          final jsonString = jsonEncode(jsonList);
-
-          // Carousel 데이터를 Android 위젯이 읽을 수 있는 키로 저장
-          await prefs.setString('flutter.selectedSchedules', jsonString);
-          await prefs.setInt('flutter.current_index', 0); // 초기 인덱스
-          await prefs.setInt('flutter.total_count', upcomingExams.length);
-
-          // 현재 표시할 시험 (첫 번째 일정)
-          final currentSchedule = upcomingExams.first;
-
-          // 개별 데이터도 저장 (호환성을 위해)
-          await prefs.setString(
-            'flutter.exam_university',
-            currentSchedule.university,
-          );
-          await prefs.setString(
-            'flutter.exam_category',
-            currentSchedule.category,
-          );
-          await prefs.setString(
-            'flutter.exam_department',
-            currentSchedule.department,
-          );
-          await prefs.setString(
-            'flutter.exam_dateTime',
-            currentSchedule.examDateTime.toIso8601String(),
-          );
-
-          print('Android 위젯 Carousel 데이터 업데이트 완료');
-          print('총 ${upcomingExams.length}개 시험, 현재: ${currentSchedule.department}');
-          print('전체 JSON: $jsonString');
-        } else {
-          // 미래 시험이 없는 경우
-          await prefs.setString('flutter.selectedSchedules', '[]');
-          await prefs.setInt('flutter.current_index', 0);
-          await prefs.setInt('flutter.total_count', 0);
-          await prefs.remove('flutter.exam_university');
-          await prefs.remove('flutter.exam_category');
-          await prefs.remove('flutter.exam_department');
-          await prefs.remove('flutter.exam_dateTime');
-
-          print('Android 위젯 데이터 초기화 완료 (미래 시험 없음)');
-        }
-      } else {
-        // 빈 데이터 저장
-        await prefs.setString('flutter.selectedSchedules', '[]');
-        await prefs.setInt('flutter.current_index', 0);
-        await prefs.setInt('flutter.total_count', 0);
-        await prefs.remove('flutter.exam_university');
-        await prefs.remove('flutter.exam_category');
-        await prefs.remove('flutter.exam_department');
-        await prefs.remove('flutter.exam_dateTime');
-
-        print('Android 위젯 데이터 초기화 완료');
-      }
-
-      // Android 위젯 강제 업데이트 트리거
-      await _triggerAndroidWidgetUpdate();
-    } catch (e) {
-      print('Android 위젯 업데이트 실패: $e');
-    }
-  }
-
-  // Android 위젯 업데이트 트리거
-  Future<void> _triggerAndroidWidgetUpdate() async {
-    if (Platform.isAndroid) {
-      try {
-        // Method Channel을 통해 Android 위젯 업데이트 요청
-        const platform = MethodChannel('com.aim.aimNonsul/widget');
-        await platform.invokeMethod('updateAndroidWidget');
-      } catch (e) {
-        print('Android 위젯 업데이트 트리거 실패: $e');
-      }
-    }
-  }
 
   // 대표 모집단위 설정하기 (기존 대표는 해제)
   Future<void> setPrimarySchedule(int targetId) async {

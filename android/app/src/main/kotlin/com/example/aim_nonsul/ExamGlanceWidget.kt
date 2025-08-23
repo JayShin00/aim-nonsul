@@ -60,9 +60,9 @@ class ExamGlanceWidget : GlanceAppWidget() {
 
     @Composable
     private fun ExamWidgetContent(context: Context) {
-        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-        val selectedSchedulesJson = prefs.getString("flutter.flutter.flutter.selectedSchedules", null)
-        val currentIndex = prefs.getInt("flutter.current_index", 0)
+        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+        val selectedSchedulesJson = prefs.getString("flutter.selectedSchedules", null)
+        val currentIndex = prefs.getInt("current_index", 0)
 
         // Check if we have valid data (moved try-catch logic outside composable)
         val examData = parseExamData(selectedSchedulesJson, currentIndex)
@@ -371,9 +371,9 @@ class NavigationActionCallback : ActionCallback {
         val direction = parameters[directionKey] ?: return
         
         try {
-            val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            val selectedSchedulesJson = prefs.getString("flutter.flutter.flutter.selectedSchedules", null)
-            val currentIndex = prefs.getInt("flutter.current_index", 0)
+            val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+            val selectedSchedulesJson = prefs.getString("flutter.selectedSchedules", null)
+            val currentIndex = prefs.getInt("current_index", 0)
             
             if (!selectedSchedulesJson.isNullOrEmpty() && selectedSchedulesJson != "[]") {
                 val schedulesArray = JSONArray(selectedSchedulesJson)

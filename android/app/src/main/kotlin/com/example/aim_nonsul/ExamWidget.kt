@@ -48,11 +48,11 @@ class ExamWidget : AppWidgetProvider() {
     
     private fun handleCarouselNavigation(context: Context, direction: String) {
         try {
-            val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
             
             // Flutter의 selectedSchedules 데이터 로드
-            val selectedSchedulesJson = prefs.getString("flutter.flutter.flutter.selectedSchedules", null)
-            val currentIndex = prefs.getInt("flutter.current_index", 0)
+            val selectedSchedulesJson = prefs.getString("flutter.selectedSchedules", null)
+            val currentIndex = prefs.getInt("current_index", 0)
             
             if (!selectedSchedulesJson.isNullOrEmpty() && selectedSchedulesJson != "[]") {
                 val schedulesArray = JSONArray(selectedSchedulesJson)
@@ -68,7 +68,7 @@ class ExamWidget : AppWidgetProvider() {
                     
                     // 새로운 인덱스 저장
                     prefs.edit()
-                        .putInt("flutter.current_index", newIndex)
+                        .putInt("current_index", newIndex)
                         .apply()
                     
                     Log.d("ExamWidget", "Carousel 네비게이션: $direction -> 인덱스 $currentIndex -> $newIndex")
@@ -108,10 +108,10 @@ class ExamWidget : AppWidgetProvider() {
             
             try {
                 // SharedPreferences에서 데이터 읽기
-                val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                val selectedSchedulesJson = prefs.getString("flutter.flutter.flutter.selectedSchedules", null)
-                val currentIndex = prefs.getInt("flutter.current_index", 0)
-                val totalCount = prefs.getInt("flutter.total_count", 0)
+                val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+                val selectedSchedulesJson = prefs.getString("flutter.selectedSchedules", null)
+                val currentIndex = prefs.getInt("current_index", 0)
+                val totalCount = prefs.getInt("total_count", 0)
                 
                 Log.d("ExamWidget", "Carousel 데이터 - JSON: $selectedSchedulesJson, Index: $currentIndex, Total: $totalCount")
                 
