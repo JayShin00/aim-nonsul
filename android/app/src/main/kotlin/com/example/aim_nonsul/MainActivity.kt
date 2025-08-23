@@ -31,12 +31,23 @@ class MainActivity : FlutterActivity() {
     
     private fun updateAllWidgets(context: Context) {
         val appWidgetManager = AppWidgetManager.getInstance(context)
-        val componentName = ComponentName(context, ExamWidget::class.java)
-        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
         
-        val intent = Intent(context, ExamWidget::class.java)
-        intent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
-        context.sendBroadcast(intent)
+        // Update legacy XML widget
+        val examWidgetComponent = ComponentName(context, ExamWidget::class.java)
+        val examWidgetIds = appWidgetManager.getAppWidgetIds(examWidgetComponent)
+        
+        val examIntent = Intent(context, ExamWidget::class.java)
+        examIntent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+        examIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, examWidgetIds)
+        context.sendBroadcast(examIntent)
+        
+        // Update Glance widget
+        val glanceWidgetComponent = ComponentName(context, ExamGlanceWidgetReceiver::class.java)
+        val glanceWidgetIds = appWidgetManager.getAppWidgetIds(glanceWidgetComponent)
+        
+        val glanceIntent = Intent(context, ExamGlanceWidgetReceiver::class.java)
+        glanceIntent.action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+        glanceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, glanceWidgetIds)
+        context.sendBroadcast(glanceIntent)
     }
 }

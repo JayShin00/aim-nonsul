@@ -134,7 +134,7 @@ class LocalScheduleService {
           final jsonString = jsonEncode(jsonList);
 
           // Carousel 데이터를 Android 위젯이 읽을 수 있는 키로 저장
-          await prefs.setString('flutter.flutter.selectedSchedules', jsonString);
+          await prefs.setString('flutter.selectedSchedules', jsonString);
           await prefs.setInt('flutter.current_index', 0); // 초기 인덱스
           await prefs.setInt('flutter.total_count', upcomingExams.length);
 
@@ -164,7 +164,7 @@ class LocalScheduleService {
           print('전체 JSON: $jsonString');
         } else {
           // 미래 시험이 없는 경우
-          await prefs.setString('flutter.flutter.selectedSchedules', '[]');
+          await prefs.setString('flutter.selectedSchedules', '[]');
           await prefs.setInt('flutter.current_index', 0);
           await prefs.setInt('flutter.total_count', 0);
           await prefs.remove('flutter.exam_university');
@@ -176,7 +176,7 @@ class LocalScheduleService {
         }
       } else {
         // 빈 데이터 저장
-        await prefs.setString('flutter.flutter.selectedSchedules', '[]');
+        await prefs.setString('flutter.selectedSchedules', '[]');
         await prefs.setInt('flutter.current_index', 0);
         await prefs.setInt('flutter.total_count', 0);
         await prefs.remove('flutter.exam_university');

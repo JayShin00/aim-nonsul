@@ -10,10 +10,13 @@ class WidgetService {
 
   /// 위젯 업데이트 (Carousel 지원)
   static Future<void> updateWidget(List<ExamSchedule> examList) async {
-    if (examList.isEmpty) {
-      // 시험이 없는 경우
-      await _clearWidgetData();
-    } else {
+    try {
+      if (examList.isEmpty) {
+        // 시험이 없는 경우
+        await _clearWidgetData();
+        return;
+      }
+      
       // 미래 시험만 필터링
       final upcomingExams = examList
           .where((exam) => exam.examDateTime.isAfter(DateTime.now()))
@@ -24,25 +27,36 @@ class WidgetService {
         return;
       }
 
-      // 현재 carousel index 가져오기
+      // 현재 carousel index 가져오기 및 유효성 검증
       final currentIndex = await _getCurrentCarouselIndex();
-      final validIndex = currentIndex < upcomingExams.length ? currentIndex : 0;
+      final validIndex = (currentIndex >= 0 && currentIndex < upcomingExams.length) 
+          ? currentIndex 
+          : 0;
       
       // carousel index 저장
       await _saveCurrentCarouselIndex(validIndex);
       
       // 전체 시험 목록과 현재 인덱스로 위젯 업데이트
       await _updateCarouselWidgetData(upcomingExams, validIndex);
+    } catch (e) {
+      print('위젯 업데이트 중 오류 발생: $e');
+      // 오류 발생 시 기본 데이터로 초기화
+      await _clearWidgetData();
     }
   }
 
   /// Carousel 위젯 데이터 업데이트
   static Future<void> _updateCarouselWidgetData(List<ExamSchedule> examList, int currentIndex) async {
     try {
-      // 전체 시험 목록을 JSON으로 변환
+      // 데이터 유효성 검증
+      if (examList.isEmpty || currentIndex < 0 || currentIndex >= examList.length) {
+        throw ArgumentError('Invalid exam list or current index');
+      }
+      
+      // 전체 시험 목록을 JSON으로 변환 (데이터 검증 포함)
       final examListData = examList.map((exam) => {
-        'university': exam.university,
-        'department': exam.department,
+        'university': exam.university.isNotEmpty ? exam.university : '대학명 없음',
+        'department': exam.department.isNotEmpty ? exam.department : '학과명 없음',
         'category': exam.category,
         'examDateTime': exam.examDateTime.toIso8601String(),
         'isPrimary': exam.isPrimary,
@@ -81,11 +95,19 @@ class WidgetService {
       await HomeWidget.saveWidgetData<int>('current_index', currentIndex);
       await HomeWidget.saveWidgetData<int>('total_count', examList.length);
 
-      // 위젯 업데이트 트리거
+      // 위젯 업데이트 트리거 (기존 XML 위젯과 새로운 Glance 위젯 모두 업데이트)
       await HomeWidget.updateWidget(
         name: _widgetName,
         androidName: 'ExamWidget',
         iOSName: 'ExamWidget',
+        qualifiedAndroidName: 'com.example.aim_nonsul.ExamWidget',
+      );
+      
+      // Glance 위젯 업데이트
+      await HomeWidget.updateWidget(
+        name: 'ExamGlanceWidget',
+        androidName: 'ExamGlanceWidgetReceiver',
+        qualifiedAndroidName: 'com.example.aim_nonsul.ExamGlanceWidgetReceiver',
       );
 
       print('Carousel 위젯 업데이트 성공: ${currentExam.department} ($currentIndex/${examList.length})');
@@ -107,11 +129,19 @@ class WidgetService {
       await HomeWidget.saveWidgetData<int>('current_index', 0);
       await HomeWidget.saveWidgetData<int>('total_count', 0);
 
-      // 위젯 업데이트 트리거
+      // 위젯 업데이트 트리거 (기존 XML 위젯과 새로운 Glance 위젯 모두 업데이트)
       await HomeWidget.updateWidget(
         name: _widgetName,
         androidName: 'ExamWidget',
         iOSName: 'ExamWidget',
+        qualifiedAndroidName: 'com.example.aim_nonsul.ExamWidget',
+      );
+      
+      // Glance 위젯 업데이트
+      await HomeWidget.updateWidget(
+        name: 'ExamGlanceWidget',
+        androidName: 'ExamGlanceWidgetReceiver',
+        qualifiedAndroidName: 'com.example.aim_nonsul.ExamGlanceWidgetReceiver',
       );
     } catch (e) {
       print('위젯 데이터 초기화 실패: $e');
@@ -123,22 +153,40 @@ class WidgetService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = prefs.getStringList('selectedSchedules') ?? [];
-      if (jsonList.isEmpty) return;
+      if (jsonList.isEmpty) {
+        print('선택된 일정이 없어 네비게이션할 수 없습니다');
+        return;
+      }
 
       final schedules = jsonList.map((e) => ExamSchedule.fromMap(jsonDecode(e))).toList();
       final upcomingExams = schedules
           .where((exam) => exam.examDateTime.isAfter(DateTime.now()))
           .toList();
 
-      if (upcomingExams.isEmpty) return;
+      if (upcomingExams.isEmpty) {
+        print('다가오는 시험이 없어 네비게이션할 수 없습니다');
+        return;
+      }
+      
+      if (upcomingExams.length == 1) {
+        print('시험이 하나뿐이어서 네비게이션할 수 없습니다');
+        return;
+      }
 
       final currentIndex = await _getCurrentCarouselIndex();
-      final nextIndex = (currentIndex + 1) % upcomingExams.length;
+      // 인덱스 유효성 검증
+      final validCurrentIndex = (currentIndex >= 0 && currentIndex < upcomingExams.length) 
+          ? currentIndex 
+          : 0;
+      final nextIndex = (validCurrentIndex + 1) % upcomingExams.length;
       
       await _saveCurrentCarouselIndex(nextIndex);
       await _updateCarouselWidgetData(upcomingExams, nextIndex);
+      print('Carousel 다음 이동 성공: $validCurrentIndex -> $nextIndex');
     } catch (e) {
       print('Carousel 다음 이동 실패: $e');
+      // 오류 시 전체 위젯 다시 로드 시도
+      await _reloadWidgetFromPreferences();
     }
   }
 
@@ -147,22 +195,40 @@ class WidgetService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = prefs.getStringList('selectedSchedules') ?? [];
-      if (jsonList.isEmpty) return;
+      if (jsonList.isEmpty) {
+        print('선택된 일정이 없어 네비게이션할 수 없습니다');
+        return;
+      }
 
       final schedules = jsonList.map((e) => ExamSchedule.fromMap(jsonDecode(e))).toList();
       final upcomingExams = schedules
           .where((exam) => exam.examDateTime.isAfter(DateTime.now()))
           .toList();
 
-      if (upcomingExams.isEmpty) return;
+      if (upcomingExams.isEmpty) {
+        print('다가오는 시험이 없어 네비게이션할 수 없습니다');
+        return;
+      }
+      
+      if (upcomingExams.length == 1) {
+        print('시험이 하나뿐이어서 네비게이션할 수 없습니다');
+        return;
+      }
 
       final currentIndex = await _getCurrentCarouselIndex();
-      final previousIndex = currentIndex == 0 ? upcomingExams.length - 1 : currentIndex - 1;
+      // 인덱스 유효성 검증
+      final validCurrentIndex = (currentIndex >= 0 && currentIndex < upcomingExams.length) 
+          ? currentIndex 
+          : 0;
+      final previousIndex = validCurrentIndex == 0 ? upcomingExams.length - 1 : validCurrentIndex - 1;
       
       await _saveCurrentCarouselIndex(previousIndex);
       await _updateCarouselWidgetData(upcomingExams, previousIndex);
+      print('Carousel 이전 이동 성공: $validCurrentIndex -> $previousIndex');
     } catch (e) {
       print('Carousel 이전 이동 실패: $e');
+      // 오류 시 전체 위젯 다시 로드 시도
+      await _reloadWidgetFromPreferences();
     }
   }
 
@@ -183,6 +249,26 @@ class WidgetService {
       await prefs.setInt(_carouselIndexKey, index);
     } catch (e) {
       print('Carousel 인덱스 저장 실패: $e');
+    }
+  }
+
+  /// SharedPreferences에서 데이터를 다시 로드하여 위젯 업데이트
+  static Future<void> _reloadWidgetFromPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonList = prefs.getStringList('selectedSchedules') ?? [];
+      
+      if (jsonList.isEmpty) {
+        await _clearWidgetData();
+        return;
+      }
+      
+      final schedules = jsonList.map((e) => ExamSchedule.fromMap(jsonDecode(e))).toList();
+      await updateWidget(schedules);
+      print('SharedPreferences에서 위젯 데이터 재로드 완료');
+    } catch (e) {
+      print('위젯 데이터 재로드 실패: $e');
+      await _clearWidgetData();
     }
   }
 

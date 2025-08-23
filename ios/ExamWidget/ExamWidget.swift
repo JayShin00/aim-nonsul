@@ -333,18 +333,30 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                 
                 // 네비게이션 버튼들 (iOS 17+)
                 if #available(iOS 17.0, *), let carouselData = entry.carouselData, carouselData.totalCount > 1 {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Button(intent: CarouselNavigationIntent(direction: "previous")) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 10, weight: .bold))
+                            Image(systemName: "chevron.left.circle.fill")
+                                .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(primaryColor)
+                                .background(
+                                    Circle()
+                                        .fill(Color.white)
+                                        .frame(width: 24, height: 24)
+                                        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                                )
                         }
                         .buttonStyle(.plain)
                         
                         Button(intent: CarouselNavigationIntent(direction: "next")) {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .bold))
+                            Image(systemName: "chevron.right.circle.fill")
+                                .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(primaryColor)
+                                .background(
+                                    Circle()
+                                        .fill(Color.white)
+                                        .frame(width: 24, height: 24)
+                                        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                                )
                         }
                         .buttonStyle(.plain)
                     }
@@ -356,12 +368,16 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
             }
             .padding(.bottom, 6)
             
-            // Page indicator (if multiple exams)
+            // Dot indicator (if multiple exams)
             if let carouselData = entry.carouselData, carouselData.totalCount > 1 {
-                Text("\(carouselData.currentIndex + 1)/\(carouselData.totalCount)")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(textSecondary)
-                    .padding(.bottom, 4)
+                HStack(spacing: 4) {
+                    ForEach(0..<carouselData.totalCount, id: \.self) { index in
+                        Circle()
+                            .fill(index == carouselData.currentIndex ? primaryColor : textSecondary.opacity(0.3))
+                            .frame(width: 4, height: 4)
+                    }
+                }
+                .padding(.bottom, 6)
             }
             
             Spacer()
@@ -427,11 +443,15 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
             
             // 오른쪽: 네비게이션 및 지표
             VStack(spacing: 8) {
-                // 상단 지표
+                // Dot indicator
                 if let carouselData = entry.carouselData, carouselData.totalCount > 1 {
-                    Text("\(carouselData.currentIndex + 1)/\(carouselData.totalCount)")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(textSecondary)
+                    HStack(spacing: 4) {
+                        ForEach(0..<carouselData.totalCount, id: \.self) { index in
+                            Circle()
+                                .fill(index == carouselData.currentIndex ? primaryColor : textSecondary.opacity(0.3))
+                                .frame(width: 5, height: 5)
+                        }
+                    }
                 } else if examInfo.isPrimary {
                     Image(systemName: "star.fill")
                         .font(.system(size: 16))
@@ -444,22 +464,28 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                 if #available(iOS 17.0, *), let carouselData = entry.carouselData, carouselData.totalCount > 1 {
                     VStack(spacing: 8) {
                         Button(intent: CarouselNavigationIntent(direction: "previous")) {
-                            Image(systemName: "chevron.up")
-                                .font(.system(size: 16, weight: .bold))
+                            Image(systemName: "chevron.up.circle.fill")
+                                .font(.system(size: 20, weight: .medium))
                                 .foregroundColor(primaryColor)
-                                .frame(width: 32, height: 32)
-                                .background(Color.gray.opacity(0.1))
-                                .clipShape(Circle())
+                                .background(
+                                    Circle()
+                                        .fill(Color.white)
+                                        .frame(width: 36, height: 36)
+                                        .shadow(color: .black.opacity(0.12), radius: 3, x: 0, y: 2)
+                                )
                         }
                         .buttonStyle(.plain)
                         
                         Button(intent: CarouselNavigationIntent(direction: "next")) {
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 16, weight: .bold))
+                            Image(systemName: "chevron.down.circle.fill")
+                                .font(.system(size: 20, weight: .medium))
                                 .foregroundColor(primaryColor)
-                                .frame(width: 32, height: 32)
-                                .background(Color.gray.opacity(0.1))
-                                .clipShape(Circle())
+                                .background(
+                                    Circle()
+                                        .fill(Color.white)
+                                        .frame(width: 36, height: 36)
+                                        .shadow(color: .black.opacity(0.12), radius: 3, x: 0, y: 2)
+                                )
                         }
                         .buttonStyle(.plain)
                     }

@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
-    id("com.google.gms.google-services")
+    // id("com.google.gms.google-services")
     // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -16,6 +16,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -40,8 +41,31 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+    
+    buildFeatures {
+        compose = true
+    }
+    
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.3"
+    }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    
+    // Compose BOM for version management (compatible with Kotlin 1.9.10)
+    implementation(platform("androidx.compose:compose-bom:2023.10.01"))
+    
+    // Jetpack Glance dependencies for modern Android widgets
+    implementation("androidx.glance:glance-appwidget:1.0.0")
+    
+    // Essential Compose dependencies for Glance
+    implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.activity:activity-compose:1.8.2")
 }

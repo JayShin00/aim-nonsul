@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit
 import android.content.Intent
 import android.app.PendingIntent
 import android.content.ComponentName
+import android.widget.LinearLayout
 
 class ExamWidget : AppWidgetProvider() {
 
@@ -50,7 +51,7 @@ class ExamWidget : AppWidgetProvider() {
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             
             // Flutter의 selectedSchedules 데이터 로드
-            val selectedSchedulesJson = prefs.getString("flutter.flutter.selectedSchedules", null)
+            val selectedSchedulesJson = prefs.getString("flutter.flutter.flutter.selectedSchedules", null)
             val currentIndex = prefs.getInt("flutter.current_index", 0)
             
             if (!selectedSchedulesJson.isNullOrEmpty() && selectedSchedulesJson != "[]") {
@@ -108,7 +109,7 @@ class ExamWidget : AppWidgetProvider() {
             try {
                 // SharedPreferences에서 데이터 읽기
                 val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                val selectedSchedulesJson = prefs.getString("flutter.flutter.selectedSchedules", null)
+                val selectedSchedulesJson = prefs.getString("flutter.flutter.flutter.selectedSchedules", null)
                 val currentIndex = prefs.getInt("flutter.current_index", 0)
                 val totalCount = prefs.getInt("flutter.total_count", 0)
                 
@@ -161,9 +162,9 @@ class ExamWidget : AppWidgetProvider() {
                             // 네비게이션 버튼 및 페이지 인디케이터 설정
                             val actualTotalCount = schedulesArray.length()
                             if (actualTotalCount > 1) {
-                                // 페이지 인디케이터 표시
-                                views.setViewVisibility(R.id.page_indicator, View.VISIBLE)
-                                views.setTextViewText(R.id.page_indicator, "${validIndex + 1}/$actualTotalCount")
+                                // 도트 인디케이터 표시
+                                views.setViewVisibility(R.id.dot_indicator, View.VISIBLE)
+                                setupDotIndicator(context, views, validIndex, actualTotalCount)
                                 
                                 // 네비게이션 버튼 표시 및 클릭 이벤트 설정
                                 views.setViewVisibility(R.id.nav_previous, View.VISIBLE)
@@ -199,7 +200,7 @@ class ExamWidget : AppWidgetProvider() {
                                 // 단일 항목인 경우 네비게이션 버튼 숨기기
                                 views.setViewVisibility(R.id.nav_previous, View.GONE)
                                 views.setViewVisibility(R.id.nav_next, View.GONE)
-                                views.setViewVisibility(R.id.page_indicator, View.GONE)
+                                views.setViewVisibility(R.id.dot_indicator, View.GONE)
                             }
                             
                         } else {
@@ -238,6 +239,27 @@ class ExamWidget : AppWidgetProvider() {
             // 위젯 업데이트
             appWidgetManager.updateAppWidget(appWidgetId, views)
             Log.d("ExamWidget", "위젯 업데이트 완료")
+        }
+        
+        private fun setupDotIndicator(context: Context, views: RemoteViews, currentIndex: Int, totalCount: Int) {
+            // Create dots representation with filled circle for current item
+            val dots = StringBuilder()
+            for (i in 0 until totalCount) {
+                if (i == currentIndex) {
+                    dots.append("●")  // Active dot (filled circle) - will be colored pink
+                } else {
+                    dots.append("●")  // All dots are filled circles, color will indicate state
+                }
+                if (i < totalCount - 1) {
+                    dots.append("  ")  // Double space between dots for better spacing
+                }
+            }
+            
+            // Set the dots text
+            views.setTextViewText(R.id.dot_indicator, dots.toString())
+            
+            // For now, use a single color. In Jetpack Glance, we'll have better control
+            views.setTextColor(R.id.dot_indicator, android.graphics.Color.parseColor("#D63384"))
         }
         
         private fun showEmptyState(views: RemoteViews) {
