@@ -40,8 +40,8 @@ class BackgroundNotificationService {
       // Update immediately
       await _updateNotificationsInBackground();
       
-      // Set up timer for frequent updates (1 minute for testing)
-      Timer.periodic(const Duration(minutes: 1), (timer) async {
+      // Set up timer for daily updates
+      Timer.periodic(const Duration(days: 1), (timer) async {
         await _updateNotificationsInBackground();
       });
     } catch (e) {
@@ -67,7 +67,7 @@ class BackgroundNotificationService {
       // Check if we need to update (avoid excessive updates)
       final lastUpdate = prefs.getInt(_lastUpdateKey) ?? 0;
       final now = DateTime.now().millisecondsSinceEpoch;
-      final updateInterval = const Duration(minutes: 1).inMilliseconds;
+      final updateInterval = const Duration(hours: 12).inMilliseconds; // Allow update twice a day if needed
       
       if (now - lastUpdate < updateInterval) {
         if (kDebugMode) {

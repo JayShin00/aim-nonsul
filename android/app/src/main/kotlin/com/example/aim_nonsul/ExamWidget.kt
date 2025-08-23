@@ -312,11 +312,19 @@ class ExamWidget : AppWidgetProvider() {
                             views.setViewVisibility(R.id.empty_layout, View.GONE)
                             views.setViewVisibility(R.id.content_container, View.VISIBLE)
                             
-                            // 헤더
+                            // 헤더 및 D-Day 배지 스타일링
                             views.setViewVisibility(R.id.star_indicator, if (isPrimary) View.VISIBLE else View.GONE)
                             
-                            // 대학명, 학과명 (improved text handling)
+                            // 대학명, 학과명 (improved text handling with primary styling)
                             views.setTextViewText(R.id.university_name, university)
+                            if (isPrimary) {
+                                views.setInt(R.id.university_name, "setTextColor", android.graphics.Color.parseColor("#FF8C00"))
+                                views.setFloat(R.id.university_name, "setTextSize", 16f) // Slightly larger for primary
+                            } else {
+                                views.setInt(R.id.university_name, "setTextColor", android.graphics.Color.parseColor("#2C3E50"))
+                                views.setFloat(R.id.university_name, "setTextSize", 14f) // Normal size
+                            }
+                            
                             val cleanDepartment = department.replace("⭐ ", "").trim()
                             views.setTextViewText(R.id.department_name, cleanDepartment)
                             
@@ -327,14 +335,22 @@ class ExamWidget : AppWidgetProvider() {
                             // D-Day 뱃지 with enhanced styling
                             views.setTextViewText(R.id.dday_badge, dDayText)
                             
-                            // Enhanced D-Day color scheme
-                            val dDayColor = when {
-                                dDay <= 0 -> "#6C757D"  // Gray for past/today
-                                dDay <= 7 -> "#E74C3C"   // Red for urgent (1 week)
-                                dDay <= 30 -> "#D63384"  // Pink for soon (1 month)
-                                else -> "#3498DB"        // Blue for distant future
+                            // Apply special background and styling for starred exams
+                            if (isPrimary) {
+                                views.setInt(R.id.dday_badge, "setBackgroundResource", R.drawable.dday_badge_starred)
+                                views.setInt(R.id.dday_badge, "setTextColor", android.graphics.Color.parseColor("#FF8C00"))
+                                Log.d("ExamWidget", "Primary exam detected - applying starred D-Day badge")
+                            } else {
+                                views.setInt(R.id.dday_badge, "setBackgroundResource", android.R.color.transparent)
+                                // Regular D-Day color scheme
+                                val dDayColor = when {
+                                    dDay <= 0 -> "#6C757D"  // Gray for past/today
+                                    dDay <= 7 -> "#E74C3C"   // Red for urgent (1 week)
+                                    dDay <= 30 -> "#D63384"  // Pink for soon (1 month)
+                                    else -> "#3498DB"        // Blue for distant future
+                                }
+                                views.setInt(R.id.dday_badge, "setTextColor", android.graphics.Color.parseColor(dDayColor))
                             }
-                            views.setInt(R.id.dday_badge, "setTextColor", android.graphics.Color.parseColor(dDayColor))
                             
                             // 네비게이션 버튼 및 페이지 인디케이터 설정
                             val actualTotalCount = schedulesArray.length()
