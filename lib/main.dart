@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:aim_nonsul/screens/home_screen.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:aim_nonsul/firebase_options.dart';
+// import 'package:firebase_core/firebase_core.dart';
+// import 'package:aim_nonsul/firebase_options.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
 import 'package:home_widget/home_widget.dart';
+import 'package:aim_nonsul/services/notification_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // Firebase 초기화 전에 필수
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  ); // Firebase 초기화
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Firebase 초기화 비활성화 (mock data 사용 중)
+  // await Firebase.initializeApp(
+  //   options: DefaultFirebaseOptions.currentPlatform,
+  // );
 
   // Home Widget App Group ID 설정
   await HomeWidget.setAppGroupId('group.com.aim.aimNonsul');
+
+  // Notification Service 초기화
+  await NotificationService().initialize();
 
   runApp(const MyApp());
 }
