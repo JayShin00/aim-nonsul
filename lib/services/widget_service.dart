@@ -115,12 +115,6 @@ class WidgetService {
         qualifiedAndroidName: 'com.example.aim_nonsul.ExamWidget',
       );
       
-      // Glance 위젯 업데이트
-      await HomeWidget.updateWidget(
-        name: 'ExamGlanceWidget',
-        androidName: 'ExamGlanceWidgetReceiver',
-        qualifiedAndroidName: 'com.example.aim_nonsul.ExamGlanceWidgetReceiver',
-      );
 
       print('Carousel 위젯 업데이트 성공: ${currentExam.department} ($currentIndex/${examList.length})');
     } catch (e) {
@@ -184,12 +178,6 @@ class WidgetService {
         qualifiedAndroidName: 'com.example.aim_nonsul.ExamWidget',
       );
       
-      // Glance 위젯 업데이트
-      await HomeWidget.updateWidget(
-        name: 'ExamGlanceWidget',
-        androidName: 'ExamGlanceWidgetReceiver',
-        qualifiedAndroidName: 'com.example.aim_nonsul.ExamGlanceWidgetReceiver',
-      );
       
       print('위젯 데이터 초기화 완료');
     } catch (e) {

@@ -133,9 +133,15 @@ class ExamWidget : AppWidgetProvider() {
                         if (university.isNotEmpty() && department.isNotEmpty() && examDateTimeStr.isNotEmpty()) {
                             // D-Day 계산
                             val dDay = calculateDDay(examDateTimeStr)
-                            val dDayText = if (dDay == 0) "D-Day" else if (dDay < 0) "종료" else "D-$dDay"
+                            val dDayText = when {
+                                dDay == 0 -> "D-Day"
+                                dDay < 0 -> "종료"
+                                dDay < 10 -> "D-$dDay"
+                                dDay < 100 -> "D-$dDay" 
+                                else -> "D-$dDay" // Supports 3-digit numbers (100+)
+                            }
                             
-                            Log.d("ExamWidget", "D-Day 계산 결과: $dDayText")
+                            Log.d("ExamWidget", "D-Day 계산 결과: $dDayText (${dDay}일)")
                             
                             // 일정 데이터 표시
                             views.setViewVisibility(R.id.empty_layout, View.GONE)
@@ -144,19 +150,25 @@ class ExamWidget : AppWidgetProvider() {
                             // 헤더
                             views.setViewVisibility(R.id.star_indicator, if (isPrimary) View.VISIBLE else View.GONE)
                             
-                            // 대학명, 학과명
+                            // 대학명, 학과명 (improved text handling)
                             views.setTextViewText(R.id.university_name, university)
-                            views.setTextViewText(R.id.department_name, department.replace("⭐ ", ""))
+                            val cleanDepartment = department.replace("⭐ ", "").trim()
+                            views.setTextViewText(R.id.department_name, cleanDepartment)
                             
                             // 시험일 표시
                             val formattedDate = formatExamDate(examDateTimeStr)
                             views.setTextViewText(R.id.exam_date, formattedDate)
                             
-                            // D-Day 뱃지
+                            // D-Day 뱃지 with enhanced styling
                             views.setTextViewText(R.id.dday_badge, dDayText)
                             
-                            // D-Day에 따른 색상 설정 (iOS와 동일하게)
-                            val dDayColor = if (dDay <= 0) "#6C757D" else "#D63384"
+                            // Enhanced D-Day color scheme
+                            val dDayColor = when {
+                                dDay <= 0 -> "#6C757D"  // Gray for past/today
+                                dDay <= 7 -> "#E74C3C"   // Red for urgent (1 week)
+                                dDay <= 30 -> "#D63384"  // Pink for soon (1 month)
+                                else -> "#3498DB"        // Blue for distant future
+                            }
                             views.setInt(R.id.dday_badge, "setTextColor", android.graphics.Color.parseColor(dDayColor))
                             
                             // 네비게이션 버튼 및 페이지 인디케이터 설정
@@ -242,24 +254,36 @@ class ExamWidget : AppWidgetProvider() {
         }
         
         private fun setupDotIndicator(context: Context, views: RemoteViews, currentIndex: Int, totalCount: Int) {
-            // Create dots representation with filled circle for current item
+            // Limit to maximum 6 dots for optimal display
+            val displayCount = minOf(totalCount, 6)
+            
+            // Create dots with visual distinction for current position
             val dots = StringBuilder()
-            for (i in 0 until totalCount) {
+            for (i in 0 until displayCount) {
                 if (i == currentIndex) {
-                    dots.append("●")  // Active dot (filled circle) - will be colored pink
+                    // Use larger, filled circle for active dot
+                    dots.append("⬤")  // Large filled circle (active)
                 } else {
-                    dots.append("●")  // All dots are filled circles, color will indicate state
+                    // Use smaller, hollow circle for inactive dots
+                    dots.append("○")  // Hollow circle (inactive) 
                 }
-                if (i < totalCount - 1) {
-                    dots.append("  ")  // Double space between dots for better spacing
+                if (i < displayCount - 1) {
+                    dots.append(" ")  // Single space for tighter spacing
                 }
+            }
+            
+            // Add ellipsis indicator if there are more than 6 items
+            if (totalCount > 6) {
+                dots.append(" ⋯")  // Horizontal ellipsis for overflow
             }
             
             // Set the dots text
             views.setTextViewText(R.id.dot_indicator, dots.toString())
             
-            // For now, use a single color. In Jetpack Glance, we'll have better control
+            // Always use pink color - the visual distinction comes from the different symbols
             views.setTextColor(R.id.dot_indicator, android.graphics.Color.parseColor("#D63384"))
+            
+            Log.d("ExamWidget", "Dot indicator setup: ${currentIndex + 1}/$totalCount (showing $displayCount dots)")
         }
         
         private fun showEmptyState(views: RemoteViews) {
