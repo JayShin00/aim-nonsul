@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:aim_nonsul/models/exam_schedule.dart';
 import 'package:aim_nonsul/screens/add_exam_screen.dart';
 import 'package:aim_nonsul/services/local_schedule_service.dart';
+import 'package:aim_nonsul/services/widget_service.dart';
+import 'package:aim_nonsul/services/notification_service.dart';
+import 'package:aim_nonsul/services/widget_auto_scroll_service.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
 import 'package:aim_nonsul/utils/conflict_util.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,13 +21,18 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ExamSchedule> selectedSchedules = [];
   List<ExamSchedule> conflictingSchedules = [];
   final LocalScheduleService _localService = LocalScheduleService();
+  final NotificationService _notificationService = NotificationService();
   bool _isNoticeExpanded = false;
+  bool _isNotificationEnabled = false;
+  bool _isAutoScrollEnabled = true;
 
   @override
   void initState() {
     super.initState();
     loadSelected();
     _checkFirstLaunch();
+    _loadNotificationSettings();
+    _loadAutoScrollSettings();
   }
 
   Future<void> _checkFirstLaunch() async {
@@ -33,6 +41,90 @@ class _HomeScreenState extends State<HomeScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showDisclaimerDialog();
       });
+    }
+  }
+
+  Future<void> _loadNotificationSettings() async {
+    final isEnabled = await _notificationService.areNotificationsEnabled();
+    setState(() {
+      _isNotificationEnabled = isEnabled;
+    });
+  }
+
+  Future<void> _loadAutoScrollSettings() async {
+    final isEnabled = await WidgetAutoScrollService.getAutoScrollEnabled();
+    setState(() {
+      _isAutoScrollEnabled = isEnabled;
+    });
+  }
+
+  Future<void> _toggleNotifications() async {
+    try {
+      if (!_isNotificationEnabled) {
+        // Request permissions when enabling
+        final hasPermission = await _notificationService.requestPermissions();
+        if (!hasPermission) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('알림 권한이 필요합니다. 설정에서 권한을 허용해주세요.')),
+          );
+          return;
+        }
+      }
+
+      final newState = !_isNotificationEnabled;
+      await _notificationService.setNotificationsEnabled(newState);
+      
+      // Enhanced iOS notification with Live Activity support
+      if (newState && selectedSchedules.isNotEmpty) {
+        await _notificationService.showIOSEnhancedNotification(selectedSchedules);
+        
+        // Check if Live Activities are available and show info
+        final isLiveActivityAvailable = await _notificationService.areLiveActivitiesAvailable();
+        if (isLiveActivityAvailable) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('알림 및 라이브 액티비티가 활성화되었습니다! 잠금 화면에서 D-Day를 확인하세요.'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+      
+      setState(() {
+        _isNotificationEnabled = newState;
+      });
+
+      if (!newState) {
+        // Stop Live Activity when disabling notifications
+        await _notificationService.stopLiveActivity();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('알림이 비활성화되었습니다')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('알림 설정 중 오류가 발생했습니다')),
+      );
+    }
+  }
+
+  Future<void> _toggleAutoScroll() async {
+    try {
+      final newState = !_isAutoScrollEnabled;
+      await WidgetAutoScrollService.setAutoScrollEnabled(newState);
+      setState(() {
+        _isAutoScrollEnabled = newState;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(newState ? '위젯 자동 스크롤이 활성화되었습니다' : '위젯 자동 스크롤이 비활성화되었습니다'),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('자동 스크롤 설정 중 오류가 발생했습니다')),
+      );
     }
   }
 
@@ -149,8 +241,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadSelected() async {
-    final allSchedules =
-    await _localService.loadSelectedSchedules(); // 수능 포함된 전체 스케줄
+    final list = await _localService.loadSelectedSchedules();
+
+    // 고정 수능 일정 생성
+    final suneungExam = ExamSchedule(
+      id: -1, // 고정 아이템을 위한 특별한 ID
+      university: '대학수학능력시험',
+      department: '수능',
+      category: '수능',
+      examDateTime: DateTime(2025, 11, 13),
+      isPrimary: false,
+    );
+
+    // 수능을 맨 앞에 추가
+    final allSchedules = [suneungExam, ...list];
+
+    allSchedules.sort((a, b) {
+      // 수능은 항상 맨 앞에
+      if (a.id == -1) return -1;
+      if (b.id == -1) return 1;
+
+      int dateComparison = a.examDateTime.compareTo(b.examDateTime);
+      if (dateComparison != 0) return dateComparison;
+
+      int universityComparison = a.university.compareTo(b.university);
+      if (universityComparison != 0) return universityComparison;
+
+      return a.category.compareTo(b.category);
+    });
 
     final conflicts = getConflictingSchedulesInList(allSchedules);
     setState(() {
@@ -158,8 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
       conflictingSchedules = conflicts;
     });
 
-    // 위젯 업데이트 (수능 포함된 전체 스케줄로)
-    await _localService.updateWidgets(allSchedules);
+    await WidgetService.updateWidget(list); // 위젯 업데이트는 원래 리스트만 사용
   }
 
   Future<void> removeSelectedSchedule(int id) async {
@@ -201,33 +318,51 @@ class _HomeScreenState extends State<HomeScreen> {
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: "수능・논술 ",
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 24,
-                              color: AppTheme.textPrimary,
-                              letterSpacing: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: "수능・논술 ",
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 24,
+                                color: AppTheme.textPrimary,
+                                letterSpacing: 0,
+                              ),
                             ),
-                          ),
-                          // 영어 + D-Day 부분 (기본 굵기)
-                          TextSpan(
-                            text: "D-Day",
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w700, // 기본 굵기
-                              fontSize: 24,
-                              color: AppTheme.textPrimary,
-                              letterSpacing: -0.5,
+                            // 영어 + D-Day 부분 (기본 굵기)
+                            TextSpan(
+                              text: "D-Day",
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w700, // 기본 굵기
+                                fontSize: 24,
+                                color: AppTheme.textPrimary,
+                                letterSpacing: -0.5,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                      // 알림 토글 버튼
+                      IconButton(
+                        onPressed: _toggleNotifications,
+                        icon: Icon(
+                          _isNotificationEnabled 
+                              ? Icons.notifications_active
+                              : Icons.notifications_off,
+                          color: _isNotificationEnabled 
+                              ? AppTheme.primaryColor
+                              : AppTheme.textLight,
+                          size: 28,
+                        ),
+                        tooltip: _isNotificationEnabled 
+                            ? '알림 비활성화'
+                            : '알림 활성화',
+                      ),
+                    ],
                   ),
                 ),
               ),
