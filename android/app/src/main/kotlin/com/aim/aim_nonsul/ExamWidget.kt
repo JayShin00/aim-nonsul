@@ -259,10 +259,10 @@ class ExamWidget : AppWidgetProvider() {
     }
 
     companion object {
-        const val ACTION_NAVIGATE_NEXT = "com.example.aim_nonsul.ACTION_NAVIGATE_NEXT"
-        const val ACTION_NAVIGATE_PREVIOUS = "com.example.aim_nonsul.ACTION_NAVIGATE_PREVIOUS"
-        const val ACTION_AUTO_SCROLL = "com.example.aim_nonsul.ACTION_AUTO_SCROLL"
-        const val ACTION_TOGGLE_AUTO_SCROLL = "com.example.aim_nonsul.ACTION_TOGGLE_AUTO_SCROLL"
+        const val ACTION_NAVIGATE_NEXT = "com.aim.aim_nonsul.ACTION_NAVIGATE_NEXT"
+        const val ACTION_NAVIGATE_PREVIOUS = "com.aim.aim_nonsul.ACTION_NAVIGATE_PREVIOUS"
+        const val ACTION_AUTO_SCROLL = "com.aim.aim_nonsul.ACTION_AUTO_SCROLL"
+        const val ACTION_TOGGLE_AUTO_SCROLL = "com.aim.aim_nonsul.ACTION_TOGGLE_AUTO_SCROLL"
         const val EXTRA_APPWIDGET_ID = "appwidget_id"
         const val AUTO_SCROLL_REQUEST_CODE = 9999
         

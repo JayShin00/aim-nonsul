@@ -100,7 +100,7 @@ class MainActivity : FlutterActivity() {
         
         // Send broadcast to toggle auto-scroll
         val toggleIntent = Intent(context, ExamWidget::class.java)
-        toggleIntent.action = "com.example.aim_nonsul.ACTION_TOGGLE_AUTO_SCROLL"
+        toggleIntent.action = "com.aim.aim_nonsul.ACTION_TOGGLE_AUTO_SCROLL"
         context.sendBroadcast(toggleIntent)
         
         Log.d(TAG, "Auto-scroll set to: $enabled")
