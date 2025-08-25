@@ -5,7 +5,7 @@ from datetime import datetime
 import pytz  # 한국시간 변환용
 
 # 서비스 계정 키 경로
-SERVICE_ACCOUNT_KEY_PATH = 'aim-nonsul-84e84-firebase-adminsdk-fbsvc-dedb5eb41f.json'
+SERVICE_ACCOUNT_KEY_PATH = 'aim-nonsul-84e84-firebase-adminsdk-fbsvc-ff11833235.json'
 # CSV 파일 경로
 CSV_FILE_PATH = 'assets/exam_schedule.csv'
 # Firestore 컬렉션 이름

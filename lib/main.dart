@@ -12,7 +12,7 @@ void main() async {
   ); // Firebase 초기화
 
   // Home Widget App Group ID 설정
-  await HomeWidget.setAppGroupId('group.com.aim.aimNonsul');
+  await HomeWidget.setAppGroupId('group.com.aim.aimNonsul.ExamWidget');
 
   runApp(const MyApp());
 }

@@ -52,6 +52,43 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _openExternalUrl(String url) async {
+    final Uri primary = Uri.parse(url);
+    bool opened = false;
+    try {
+      opened = await launchUrl(primary, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      opened = false;
+    }
+
+    if (!opened) {
+      try {
+        opened = await launchUrl(primary, mode: LaunchMode.inAppBrowserView);
+      } catch (_) {
+        opened = false;
+      }
+    }
+
+    if (!opened) {
+      final String withWww = url.contains('://www.')
+          ? url
+          : url.replaceFirst('://', '://www.');
+      final Uri fallback = Uri.parse(withWww);
+      try {
+        opened = await launchUrl(fallback, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        opened = false;
+      }
+    }
+
+    if (!opened) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('링크를 열 수 없습니다')));
+      }
+    }
+  }
+
   Widget _buildNoticeContent() {
     return RichText(
       text: TextSpan(
@@ -63,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           const TextSpan(
             text:
-                '본 앱의 일정 정보는 참고용으로 제공되며,\n급작스러운 변동이나 공식 발표에 따라 실제 일정과 다를 수 있습니다.\n정확한 정보는 해당 기관의 공식 발표를 확인해 주시기 바랍니다.\n\n정보 수정이나 문의: ',
+            '본 앱의 일정 정보는 참고용으로 제공되며,\n급작스러운 변동이나 공식 발표에 따라 실제 일정과 다를 수 있습니다.\n정확한 정보는 해당 기관의 공식 발표를 확인해 주시기 바랍니다.\n\n정보 수정이나 문의: ',
           ),
           WidgetSpan(
             child: GestureDetector(
@@ -113,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> loadSelected() async {
     final allSchedules =
-        await _localService.loadSelectedSchedules(); // 수능 포함된 전체 스케줄
+    await _localService.loadSelectedSchedules(); // 수능 포함된 전체 스케줄
 
     final conflicts = getConflictingSchedulesInList(allSchedules);
     setState(() {
@@ -217,6 +254,13 @@ class _HomeScreenState extends State<HomeScreen> {
           child: const Icon(Icons.add, size: 32, color: Colors.white),
         ),
       ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+          child: _buildBanner(),
+        ),
+      ),
     );
   }
 
@@ -302,11 +346,81 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildBanner() {
+    return InkWell(
+      onTap: () => _openExternalUrl('https://aimscore.ai'),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.1),
+              spreadRadius: 1,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: AspectRatio(
+          aspectRatio: 1080 / 314,
+          child: Image.asset(
+            'assets/aim_banner.png',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFF7F7F8),
+                      Color(0xFFEDE7EA),
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                alignment: Alignment.centerRight,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '논술 보러 갈까? 말까?',
+                      style: AppTheme.headingSmall.copyWith(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '나의 9월 모의고사 성적으로 바로 알아보기',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildScheduleList() {
     return ListView.builder(
       padding: const EdgeInsets.only(top: 0, left: 20, right: 20, bottom: 20),
       itemCount:
-          selectedSchedules.length +
+      selectedSchedules.length +
           2, // +2 for notice accordion and powered by
       itemBuilder: (context, index) {
         // 마지막에서 두 번째 아이템은 안내사항 아코디언
@@ -357,24 +471,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 context: context,
                 builder:
                     (context) => AlertDialog(
-                      title: const Text('삭제 확인'),
-                      content: Text(
-                        '${item.university} ${item.department} 일정을 삭제하시겠습니까?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('취소'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text(
-                            '삭제',
-                            style: TextStyle(color: AppTheme.errorColor),
-                          ),
-                        ),
-                      ],
+                  title: const Text('삭제 확인'),
+                  content: Text(
+                    '${item.university} ${item.department} 일정을 삭제하시겠습니까?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('취소'),
                     ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text(
+                        '삭제',
+                        style: TextStyle(color: AppTheme.errorColor),
+                      ),
+                    ),
+                  ],
+                ),
               );
             } else if (direction == DismissDirection.startToEnd) {
               // 고정/고정해제 (수능 포함)
@@ -421,9 +535,9 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.only(left: 20),
             decoration: BoxDecoration(
               color:
-                  item.isPrimary
-                      ? AppTheme.warningColor
-                      : AppTheme.primaryColor,
+              item.isPrimary
+                  ? AppTheme.warningColor
+                  : AppTheme.primaryColor,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
@@ -481,9 +595,9 @@ class _HomeScreenState extends State<HomeScreen> {
               boxShadow: AppTheme.cardShadow,
               border: Border.all(
                 color:
-                    item.isPrimary
-                        ? AppTheme.warningColor.withValues(alpha: 0.2)
-                        : Colors.transparent,
+                item.isPrimary
+                    ? AppTheme.warningColor.withValues(alpha: 0.2)
+                    : Colors.transparent,
                 width: 1.5,
               ),
             ),
@@ -530,9 +644,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     style: AppTheme.headingSmall.copyWith(
                                       fontSize: 18,
                                       color:
-                                          isSuneung
-                                              ? Colors.white
-                                              : AppTheme.textSecondary,
+                                      isSuneung
+                                          ? Colors.white
+                                          : AppTheme.textSecondary,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -545,9 +659,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                           style: AppTheme.headingSmall.copyWith(
                                             fontSize: 18,
                                             color:
-                                                isSuneung
-                                                    ? Colors.white
-                                                    : AppTheme.textPrimary,
+                                            isSuneung
+                                                ? Colors.white
+                                                : AppTheme.textPrimary,
                                           ),
                                           maxLines: 2,
                                           overflow: TextOverflow.visible,
@@ -587,9 +701,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             dDay,
                             style: TextStyle(
                               color:
-                                  isSuneung
-                                      ? Colors.white
-                                      : AppTheme.primaryColor,
+                              isSuneung
+                                  ? Colors.white
+                                  : AppTheme.primaryColor,
                               fontWeight: FontWeight.w900,
                               fontSize: 28,
                               letterSpacing: 0.5,
@@ -611,7 +725,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color:
-                              isSuneung ? Colors.white : AppTheme.textSecondary,
+                          isSuneung ? Colors.white : AppTheme.textSecondary,
                         ),
                       ),
                     ],

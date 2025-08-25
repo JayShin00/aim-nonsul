@@ -87,8 +87,21 @@ struct Provider: TimelineProvider {
     
     private func loadPrimaryExam() -> ExamInfo? {
         // UserDefaults에서 home_widget 데이터 로드
-        let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul")
-        
+        let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul.ExamWidget")
+
+        // 디버깅용 로그
+        print("ExamWidget: App Group ID = group.com.aim.aimNonsul.ExamWidget")
+        print("ExamWidget: UserDefaults 객체 생성 성공: \(userDefaults != nil)")
+
+        // 저장된 모든 키 확인
+        if let userDefaults = userDefaults {
+            let allKeys = userDefaults.dictionaryRepresentation()
+            print("ExamWidget: 저장된 모든 키들:")
+            for (key, value) in allKeys {
+                print("ExamWidget: '\(key)' = '\(value)'")
+            }
+        }
+
         // home_widget에서 저장한 데이터 읽기
         if let examTitle = userDefaults?.string(forKey: "exam_title"),
            let examUniversity = userDefaults?.string(forKey: "exam_university"),
@@ -96,17 +109,23 @@ struct Provider: TimelineProvider {
            let examTime = userDefaults?.string(forKey: "exam_time"),
            !examTitle.isEmpty,
            !examDate.isEmpty {
-            
+
+            print("ExamWidget: 데이터 로드 성공!")
+            print("ExamWidget: examTitle = \(examTitle)")
+            print("ExamWidget: examUniversity = \(examUniversity)")
+            print("ExamWidget: examDate = \(examDate)")
+            print("ExamWidget: examTime = \(examTime)")
+
             // 날짜 파싱
             let dateFormatter = DateFormatter()
             dateFormatter.dateFormat = "yyyy-MM-dd"
-            
+
             let timeFormatter = DateFormatter()
             timeFormatter.dateFormat = "HH:mm"
-            
+
             if let parsedDate = dateFormatter.date(from: examDate) {
                 var examDateTime = parsedDate
-                
+
                 // 시간 정보가 있으면 추가
                 if !examTime.isEmpty, let parsedTime = timeFormatter.date(from: examTime) {
                     let calendar = Calendar.current
@@ -116,11 +135,11 @@ struct Provider: TimelineProvider {
                                                second: 0,
                                                of: parsedDate) ?? parsedDate
                 }
-                
+
                 // 대학명과 학과명 분리 (⭐ 제거)
                 let cleanTitle = examTitle.replacingOccurrences(of: "⭐ ", with: "")
                 let isPrimary = examTitle.contains("⭐")
-                
+
                 return ExamInfo(
                     university: examUniversity,
                     department: cleanTitle,
@@ -128,8 +147,14 @@ struct Provider: TimelineProvider {
                     isPrimary: isPrimary
                 )
             }
+        } else {
+            print("ExamWidget: 데이터 로드 실패!")
+            print("ExamWidget: examTitle = \(userDefaults?.string(forKey: "exam_title") ?? "nil")")
+            print("ExamWidget: examUniversity = \(userDefaults?.string(forKey: "exam_university") ?? "nil")")
+            print("ExamWidget: examDate = \(userDefaults?.string(forKey: "exam_date") ?? "nil")")
+            print("ExamWidget: examTime = \(userDefaults?.string(forKey: "exam_time") ?? "nil")")
         }
-        
+
         // 데이터가 없거나 파싱 실패 시 nil 반환
         return nil
     }
@@ -143,13 +168,13 @@ struct SimpleEntry: TimelineEntry {
 struct ExamWidgetEntryView : View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var family
-    
+
     // AIM 테마 색상
     private let primaryColor = Color(red: 0.84, green: 0.20, blue: 0.52) // #D63384
     private let textPrimary = Color(red: 0.17, green: 0.24, blue: 0.31) // #2C3E50
     private let textSecondary = Color(red: 0.42, green: 0.46, blue: 0.49) // #6C757D
     private let backgroundColor = Color.white
-    
+
     var body: some View {
         if let examInfo = entry.examInfo {
             switch family {
@@ -170,14 +195,14 @@ struct ExamWidgetEntryView : View {
             emptyStateView()
         }
     }
-    
+
 
 @ViewBuilder
 private func accessoryCircularView(examInfo: ExamInfo) -> some View {
     ZStack {
         Circle()
             .stroke(examInfo.dDayColor, lineWidth: 2)
-        
+
         Text(examInfo.dDayText) // 예: "D-99"
             .font(.system(size: 16, weight: .bold, design: .rounded))
             .foregroundColor(examInfo.dDayColor)
@@ -192,7 +217,7 @@ private func accessoryRectangularView(examInfo: ExamInfo) -> some View {
             .font(.caption2)
             .foregroundColor(textSecondary)
             .lineLimit(1)
-        
+
         // D-Day 강조
         Text(examInfo.dDayText)
             .font(.system(size: 22, weight: .heavy, design: .rounded)) // ← 더 큼 + 굵게
@@ -225,16 +250,16 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                 }
             }
             .padding(.bottom, 8)
-            
+
             Spacer()
-            
+
             // 학교명
             Text(examInfo.university)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            
+
             // 학과명
             Text(examInfo.department)
                 .font(.system(size: 14, weight: .medium))
@@ -242,7 +267,7 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
                 .padding(.bottom, 4)
-            
+
             // 시험일
             Text(examInfo.formattedDate)
                 .font(.system(size: 12, weight: .bold))
@@ -252,7 +277,7 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(backgroundColor)
     }
-    
+
     // 넓은 위젯 (systemMedium)
     private func mediumWidgetView(examInfo: ExamInfo) -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -261,9 +286,9 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                 Text(examInfo.dDayText)
                     .font(.system(size: 32, weight: .black, design: .rounded))
                     .foregroundColor(examInfo.dDayColor)
-                
+
                 Spacer()
-                
+
                 if examInfo.isPrimary {
                     Image(systemName: "star.fill")
                         .font(.system(size: 16))
@@ -271,29 +296,29 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                 }
             }
             .padding(.bottom, 12)
-            
+
             Spacer()
-            
+
             // 학교, 학과 (한 줄에 배치)
             HStack(spacing: 0) {
                 Text(examInfo.university)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(textPrimary)
                     .lineLimit(1)
-                
+
                 Text("·")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(textSecondary)
-                
+
                 Text(examInfo.department)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(textSecondary)
                     .lineLimit(1)
-                
+
                 Spacer()
             }
             .minimumScaleFactor(0.8)
-            
+
             // 시험일
             Text(examInfo.formattedDate)
                 .font(.system(size: 14, weight: .bold))
@@ -304,18 +329,18 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(backgroundColor)
     }
-    
+
     // 빈 상태
     private func emptyStateView() -> some View {
         VStack(spacing: 8) {
             Image(systemName: "calendar.badge.exclamationmark")
                 .font(.system(size: 24))
                 .foregroundColor(primaryColor)
-            
+
             Text("AIM 논술")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundColor(primaryColor)
-            
+
             Text("모집단위를 추가해주세요")
                 .font(.system(size: 12))
                 .foregroundColor(textSecondary)

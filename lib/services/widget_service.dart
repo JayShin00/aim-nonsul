@@ -92,6 +92,11 @@ class WidgetService {
       );
 
       print('위젯 업데이트 성공: ${exam.department}');
+      print('저장된 데이터: exam_title=${exam.isPrimary ? '⭐ ${exam.department}' : exam.department}');
+      print('저장된 데이터: exam_university=${exam.university}');
+      print('저장된 데이터: exam_date=$examDate');
+      print('저장된 데이터: exam_time=$examTime');
+      print('App Group ID: group.com.aim.aimNonsul.ExamWidget');
     } catch (e) {
       print('위젯 업데이트 실패: $e');
     }

@@ -47,7 +47,7 @@
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
-    	<string>group.com.aim.aimNonsul</string>
+    	<string>group.com.aim.aimNonsul.ExamWidget</string>
 	</array>	
 </dict>
 </plist>

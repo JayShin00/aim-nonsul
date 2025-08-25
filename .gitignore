@@ -62,3 +62,6 @@ web/.dart_tool/
 # Firebase Admin Key
 *.json
 !assets/*.json
+
+# FVM Version Cache
+.fvm/
