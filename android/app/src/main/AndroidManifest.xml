@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="aim_nonsul"
+        android:label="수능 논술 디데이"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Aim Nonsul</string>
+	<string>수능 논술 디데이</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>aim_nonsul</string>
+	<string>수능 논술 디데이</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -47,7 +47,7 @@
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
-    	<string>group.com.aim.aimNonsul</string>
+    	<string>group.com.aim.aimNonsul.ExamWidget</string>
 	</array>	
 </dict>
 </plist>

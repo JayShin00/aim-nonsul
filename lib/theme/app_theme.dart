@@ -145,7 +145,7 @@ class AppTheme {
         titleTextStyle: headingMedium,
         iconTheme: IconThemeData(color: textPrimary),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: cardBackground,
         elevation: 0,
         shadowColor: shadowColor,

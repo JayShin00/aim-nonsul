@@ -87,7 +87,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
 
   Future<void> onScheduleTap(ExamSchedule selected) async {
     final existing = await _localService.loadSelectedSchedules();
-    if (existing.length >= 6) {
+    if (existing.where((schedule) => schedule.id != -1).length >= 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("❗ 최대 6개까지만 추가할 수 있습니다."),
