@@ -241,34 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadSelected() async {
-    final list = await _localService.loadSelectedSchedules();
-
-    // 고정 수능 일정 생성
-    final suneungExam = ExamSchedule(
-      id: -1, // 고정 아이템을 위한 특별한 ID
-      university: '대학수학능력시험',
-      department: '수능',
-      category: '수능',
-      examDateTime: DateTime(2025, 11, 13),
-      isPrimary: false,
-    );
-
-    // 수능을 맨 앞에 추가
-    final allSchedules = [suneungExam, ...list];
-
-    allSchedules.sort((a, b) {
-      // 수능은 항상 맨 앞에
-      if (a.id == -1) return -1;
-      if (b.id == -1) return 1;
-
-      int dateComparison = a.examDateTime.compareTo(b.examDateTime);
-      if (dateComparison != 0) return dateComparison;
-
-      int universityComparison = a.university.compareTo(b.university);
-      if (universityComparison != 0) return universityComparison;
-
-      return a.category.compareTo(b.category);
-    });
+    final allSchedules = await _localService.loadSelectedSchedules();
 
     final conflicts = getConflictingSchedulesInList(allSchedules);
     setState(() {
@@ -276,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
       conflictingSchedules = conflicts;
     });
 
-    await WidgetService.updateWidget(list); // 위젯 업데이트는 원래 리스트만 사용
+    await WidgetService.updateWidget(allSchedules); // 위젯 업데이트는 원래 리스트만 사용
   }
 
   Future<void> removeSelectedSchedule(int id) async {
@@ -483,7 +456,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBanner() {
     return InkWell(
-      onTap: () => _openExternalUrl('https://aimscore.ai'),
+      onTap: () => _openExternalUrl('https://m.site.naver.com/1PeaL'),
       borderRadius: BorderRadius.circular(12),
       child: Container(
         decoration: BoxDecoration(

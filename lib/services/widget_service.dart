@@ -74,6 +74,7 @@ class WidgetService {
         'examDateTime': exam.examDateTime.toIso8601String(),
         'isPrimary': exam.isPrimary,
         'id': exam.id,
+        'notification': exam.notification,
       }).toList();
 
       // Carousel 메타데이터 생성
@@ -93,7 +94,20 @@ class WidgetService {
       final dateFormat = DateFormat('yyyy-MM-dd');
       final timeFormat = DateFormat('HH:mm');
       final examDate = dateFormat.format(currentExam.examDateTime);
-      final examTime = timeFormat.format(currentExam.examDateTime);
+      
+      // 시간 포맷팅 (notification 필드 고려)
+      String examTime;
+      if (currentExam.examDateTime.hour == 0 && currentExam.examDateTime.minute == 0) {
+        // 시간이 00:00인 경우 notification이 있으면 해당 문구를 보여주고, 없으면 "업데이트 예정" 표시
+        if (currentExam.notification.isNotEmpty) {
+          examTime = _truncateTextForWidget(currentExam.notification);
+        } else {
+          examTime = '업데이트 예정';
+        }
+      } else {
+        examTime = timeFormat.format(currentExam.examDateTime);
+      }
+      
       final String daysLeft = _calculateDaysLeft(currentExam.examDateTime);
 
       await HomeWidget.saveWidgetData<String>(
@@ -136,6 +150,7 @@ class WidgetService {
         'examDateTime': exam.examDateTime.toIso8601String(),
         'isPrimary': exam.isPrimary,
         'id': exam.id,
+        'notification': exam.notification,
       }).toList();
       
       final jsonString = jsonEncode(examListData);
@@ -325,5 +340,21 @@ class WidgetService {
     } else {
       return '종료';
     }
+  }
+
+  /// 긴 텍스트를 위젯에 적합한 길이로 자르기
+  static String _truncateTextForWidget(String text, {int maxLength = 50}) {
+    if (text.length <= maxLength) {
+      return text;
+    }
+    
+    // 줄바꿈 문자를 기준으로 첫 번째 줄만 사용
+    final firstLine = text.split('\n').first;
+    if (firstLine.length <= maxLength) {
+      return firstLine;
+    }
+    
+    // 긴 텍스트는 자르고 말줄임표 추가
+    return '${text.substring(0, maxLength - 3)}...';
   }
 }

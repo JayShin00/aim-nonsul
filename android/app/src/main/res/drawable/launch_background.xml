@@ -1,15 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Custom launch splash screen with AIM logo -->
+<!-- Custom launch splash screen -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- 배경색 -->
     <item android:drawable="@android:color/white" />
-    
-    <!-- D-Day 앱 로고 (중앙, 작은 크기) -->
-    <item android:gravity="center"
-          android:width="20dp"
-          android:height="20dp">
-        <bitmap
-            android:src="@drawable/dday_app_logo"
-            android:gravity="center" />
-    </item>
 </layer-list>
