@@ -46,6 +46,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -93,3 +94,20 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true # 안드로이드 플랫폼에 런처 아이콘 적용 여부
+  ios: true # iOS 플랫폼에 런처 아이콘 적용 여부
+
+  # 기본 아이콘 이미지
+  image_path: "assets/dday_app_logo.png"
+
+  # 안드로이드 adaptive icon 설정
+  adaptive_icon_background: "#FFFFFF" # 배경색 (화이트)
+  adaptive_icon_foreground: "assets/dday_app_logo.png" # 전경 이미지
+
+  # 안전 영역을 위한 inset 설정 (기존 16%보다 더 안전하게)
+  adaptive_icon_padding: true"
+
+  # 안드로이드 최소 SDK 버전
+  min_sdk_android: 21
