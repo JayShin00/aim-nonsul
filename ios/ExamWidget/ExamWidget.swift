@@ -15,6 +15,7 @@ struct ExamInfo {
     let department: String
     let examDate: Date
     let isPrimary: Bool
+    let id: String // Unique identifier for smooth transitions
     
     var dDayText: String {
         let calendar = Calendar.current
@@ -57,7 +58,8 @@ struct Provider: TimelineProvider {
             university: "서울대학교",
             department: "컴퓨터공학과",
             examDate: Calendar.current.date(byAdding: .day, value: 15, to: Date()) ?? Date(),
-            isPrimary: true
+            isPrimary: true,
+            id: "placeholder-exam"
         )
         return SimpleEntry(date: Date(), examInfo: sampleExam, carouselData: nil)
     }
@@ -90,7 +92,7 @@ struct Provider: TimelineProvider {
         if data.examList.count > 1 {
             NSLog("ExamWidget: 다중 시험 Timeline 생성 - Carousel 모드")
             // Multiple exams: Create carousel timeline with auto-scroll
-            let intervalSeconds = 15 // 15 seconds per slide (respecting iOS limits)
+            let intervalSeconds = 3 // 3 seconds per slide (fast carousel)
             let maxEntries = min(data.examList.count * 4, 20) // Limit total entries
             
             NSLog("ExamWidget: Carousel 설정 - \(intervalSeconds)초 간격, 최대 \(maxEntries)개 엔트리")
@@ -388,7 +390,8 @@ struct Provider: TimelineProvider {
             university: examData.university,
             department: examData.department,
             examDate: examData.examDateTime,
-            isPrimary: examData.isPrimary
+            isPrimary: examData.isPrimary,
+            id: examData.id
         )
     }
 }
@@ -531,16 +534,41 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                 .minimumScaleFactor(0.7)
                 .padding(.bottom, 4)
 
-            // 시험일 및 페이지 인디케이터
-            VStack(alignment: .leading, spacing: 2) {
-                Text(examInfo.formattedDate)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(textSecondary)
+            // 시험일, 페이지 인디케이터 및 네비게이션 버튼
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(examInfo.formattedDate)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(textSecondary)
+                    
+                    // Page indicator for multiple exams
+                    if let carouselData = entry.carouselData, carouselData.examList.count > 1 {
+                        createPageIndicator(currentIndex: carouselData.currentIndex, totalCount: carouselData.totalCount)
+                            .font(.system(size: 8))
+                    }
+                }
                 
-                // Page indicator for multiple exams
-                if let carouselData = entry.carouselData, carouselData.examList.count > 1 {
-                    createPageIndicator(currentIndex: carouselData.currentIndex, totalCount: carouselData.totalCount)
-                        .font(.system(size: 8))
+                Spacer()
+                
+                // Navigation buttons (iOS 17+)
+                if #available(iOS 17.0, *), let carouselData = entry.carouselData, carouselData.examList.count > 1 {
+                    HStack(spacing: 4) {
+                        // Previous button
+                        Button(intent: NavigatePreviousIntent()) {
+                            Image(systemName: "chevron.left.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(primaryColor)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Next button
+                        Button(intent: NavigateNextIntent()) {
+                            Image(systemName: "chevron.right.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(primaryColor)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
                 }
             }
         }
@@ -709,7 +737,8 @@ struct ExamWidget: Widget {
         university: "서울대학교",
         department: "인문대학 국어국문학과",
         examDate: Calendar.current.date(byAdding: .day, value: 15, to: Date()) ?? Date(),
-        isPrimary: true
+        isPrimary: true,
+        id: "preview-exam-1"
     )
     let carouselData = CarouselWidgetData(
         examList: [
@@ -730,7 +759,8 @@ struct ExamWidget: Widget {
         university: "서울대학교",
         department: "인문대학 국어국문학과",
         examDate: Calendar.current.date(byAdding: .day, value: 15, to: Date()) ?? Date(),
-        isPrimary: true
+        isPrimary: true,
+        id: "preview-exam-1"
     )
     let carouselData = CarouselWidgetData(
         examList: [
