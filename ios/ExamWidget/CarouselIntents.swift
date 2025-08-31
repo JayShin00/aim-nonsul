@@ -16,6 +16,8 @@ struct NavigateNextIntent: AppIntent {
     static var description = IntentDescription("Navigate to the next exam in the carousel")
     
     func perform() async throws -> some IntentResult {
+        NSLog("NavigateNextIntent: Started execution")
+        
         // Update carousel index
         let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul")
         let carouselData = loadCarouselData(from: userDefaults)
@@ -24,6 +26,8 @@ struct NavigateNextIntent: AppIntent {
             let currentIndex = data.currentIndex
             let nextIndex = (currentIndex + 1) % data.examList.count
             
+            NSLog("NavigateNextIntent: Moving from index \(currentIndex) to \(nextIndex) out of \(data.examList.count) exams")
+            
             // Save new index
             userDefaults?.set(nextIndex, forKey: "current_index")
             
@@ -31,11 +35,18 @@ struct NavigateNextIntent: AppIntent {
             if nextIndex < data.examList.count {
                 let exam = data.examList[nextIndex]
                 saveExamData(exam: exam, to: userDefaults)
+                NSLog("NavigateNextIntent: Updated traditional widget data for \(exam.university) - \(exam.department)")
             }
+        } else {
+            NSLog("NavigateNextIntent: No carousel data available or empty exam list")
         }
         
-        // Reload widget timelines
+        // Force immediate widget update and reload timelines
         WidgetCenter.shared.reloadTimelines(ofKind: "ExamWidget")
+        
+        // Also trigger an immediate snapshot update for faster response
+        WidgetCenter.shared.reloadAllTimelines()
+        NSLog("NavigateNextIntent: Triggered widget timeline reload and forced refresh")
         
         return .result()
     }
@@ -47,6 +58,8 @@ struct NavigatePreviousIntent: AppIntent {
     static var description = IntentDescription("Navigate to the previous exam in the carousel")
     
     func perform() async throws -> some IntentResult {
+        NSLog("NavigatePreviousIntent: Started execution")
+        
         // Update carousel index
         let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul")
         let carouselData = loadCarouselData(from: userDefaults)
@@ -55,6 +68,8 @@ struct NavigatePreviousIntent: AppIntent {
             let currentIndex = data.currentIndex
             let previousIndex = currentIndex == 0 ? data.examList.count - 1 : currentIndex - 1
             
+            NSLog("NavigatePreviousIntent: Moving from index \(currentIndex) to \(previousIndex) out of \(data.examList.count) exams")
+            
             // Save new index
             userDefaults?.set(previousIndex, forKey: "current_index")
             
@@ -62,11 +77,18 @@ struct NavigatePreviousIntent: AppIntent {
             if previousIndex < data.examList.count {
                 let exam = data.examList[previousIndex]
                 saveExamData(exam: exam, to: userDefaults)
+                NSLog("NavigatePreviousIntent: Updated traditional widget data for \(exam.university) - \(exam.department)")
             }
+        } else {
+            NSLog("NavigatePreviousIntent: No carousel data available or empty exam list")
         }
         
-        // Reload widget timelines
+        // Force immediate widget update and reload timelines
         WidgetCenter.shared.reloadTimelines(ofKind: "ExamWidget")
+        
+        // Also trigger an immediate snapshot update for faster response
+        WidgetCenter.shared.reloadAllTimelines()
+        NSLog("NavigatePreviousIntent: Triggered widget timeline reload and forced refresh")
         
         return .result()
     }
@@ -90,9 +112,23 @@ struct ExamData {
 
 // MARK: - Helper Functions
 func loadCarouselData(from userDefaults: UserDefaults?) -> CarouselData? {
-    guard let carouselJsonString = userDefaults?.string(forKey: "flutter.carousel_data") ?? userDefaults?.string(forKey: "carousel_data"),
-          let carouselJsonData = carouselJsonString.data(using: .utf8),
+    // Check both possible keys: with and without flutter prefix
+    var carouselJsonString: String?
+    if let jsonString = userDefaults?.string(forKey: "carousel_data") {
+        carouselJsonString = jsonString
+        NSLog("CarouselIntents: Found carousel_data without prefix")
+    } else if let jsonString = userDefaults?.string(forKey: "flutter.carousel_data") {
+        carouselJsonString = jsonString
+        NSLog("CarouselIntents: Found carousel_data with flutter prefix")
+    } else {
+        NSLog("CarouselIntents: No carousel data found for either key")
+        return nil
+    }
+    
+    guard let jsonString = carouselJsonString,
+          let carouselJsonData = jsonString.data(using: .utf8),
           let carouselJson = try? JSONSerialization.jsonObject(with: carouselJsonData) as? [String: Any] else {
+        NSLog("CarouselIntents: Failed to parse carousel JSON data")
         return nil
     }
     
@@ -101,26 +137,69 @@ func loadCarouselData(from userDefaults: UserDefaults?) -> CarouselData? {
     }
     
     let examList = examListArray.compactMap { examDict -> ExamData? in
-        guard let university = examDict["university"] as? String,
-              let department = examDict["department"] as? String,
-              let category = examDict["category"] as? String,
+        NSLog("CarouselIntents: Parsing exam: \(examDict)")
+        
+        // Flexible string parsing with type coercion (same as main widget)
+        guard let university = examDict["university"] as? String ?? (examDict["university"] as? NSNull == nil ? String(describing: examDict["university"] ?? "") : nil),
+              let department = examDict["department"] as? String ?? (examDict["department"] as? NSNull == nil ? String(describing: examDict["department"] ?? "") : nil),
+              let category = examDict["category"] as? String ?? (examDict["category"] as? NSNull == nil ? String(describing: examDict["category"] ?? "") : nil),
               let examDateTimeString = examDict["examDateTime"] as? String,
-              let isPrimary = examDict["isPrimary"] as? Bool,
-              let id = examDict["id"] as? String else {
+              !university.isEmpty,
+              !department.isEmpty,
+              !examDateTimeString.isEmpty else {
+            NSLog("CarouselIntents: Failed to parse exam data - missing or empty required fields")
             return nil
         }
         
-        // Parse ISO 8601 date
+        // Handle isPrimary with flexible boolean parsing (same as main widget)
+        let isPrimary: Bool
+        if let boolValue = examDict["isPrimary"] as? Bool {
+            isPrimary = boolValue
+        } else if let intValue = examDict["isPrimary"] as? Int {
+            isPrimary = intValue != 0
+        } else if let stringValue = examDict["isPrimary"] as? String {
+            isPrimary = stringValue.lowercased() == "true" || stringValue == "1"
+        } else {
+            isPrimary = false
+        }
+        
+        // Handle id as either String, Int, or other types (same as main widget)
+        let id: String
+        if let idString = examDict["id"] as? String {
+            id = idString
+        } else if let idInt = examDict["id"] as? Int {
+            id = String(idInt)
+        } else if let idDouble = examDict["id"] as? Double {
+            id = String(Int(idDouble))
+        } else {
+            id = UUID().uuidString
+            NSLog("CarouselIntents: Generated UUID for missing id: \(id)")
+        }
+        
+        // Parse ISO 8601 date with fallback
         let dateFormatter = ISO8601DateFormatter()
-        guard let examDateTime = dateFormatter.date(from: examDateTimeString) else {
-            return nil
+        var examDateTime: Date?
+        
+        if let primaryDate = dateFormatter.date(from: examDateTimeString) {
+            examDateTime = primaryDate
+        } else {
+            // Try alternative date format
+            let fallbackFormatter = DateFormatter()
+            fallbackFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+            if let fallbackDate = fallbackFormatter.date(from: examDateTimeString) {
+                examDateTime = fallbackDate
+            } else {
+                NSLog("CarouselIntents: Failed to parse date: \(examDateTimeString)")
+                return nil
+            }
         }
         
+        NSLog("CarouselIntents: Successfully parsed exam: \(university) - \(department)")
         return ExamData(
             university: university,
             department: department,
             category: category,
-            examDateTime: examDateTime,
+            examDateTime: examDateTime!,
             isPrimary: isPrimary,
             id: id
         )

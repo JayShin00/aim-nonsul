@@ -65,9 +65,11 @@ struct Provider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
+        NSLog("ExamWidget: getSnapshot 호출됨")
         let carouselData = loadCarouselData()
         let examInfo = getCurrentExam(from: carouselData)
         let entry = SimpleEntry(date: Date(), examInfo: examInfo, carouselData: carouselData)
+        NSLog("ExamWidget: getSnapshot 완료 - examInfo: \(examInfo?.id ?? "nil")")
         completion(entry)
     }
 
@@ -91,20 +93,21 @@ struct Provider: TimelineProvider {
         
         if data.examList.count > 1 {
             NSLog("ExamWidget: 다중 시험 Timeline 생성 - Carousel 모드")
-            // Multiple exams: Create carousel timeline with auto-scroll
+            // Multiple exams: Create carousel timeline with auto-scroll starting from current index
             let intervalSeconds = 3 // 3 seconds per slide (fast carousel)
             let maxEntries = min(data.examList.count * 4, 20) // Limit total entries
             
-            NSLog("ExamWidget: Carousel 설정 - \(intervalSeconds)초 간격, 최대 \(maxEntries)개 엔트리")
+            NSLog("ExamWidget: Carousel 설정 - \(intervalSeconds)초 간격, 최대 \(maxEntries)개 엔트리, 시작 인덱스: \(data.currentIndex)")
             
             for i in 0..<maxEntries {
-                let examIndex = i % data.examList.count
+                // Start from current index and cycle through
+                let examIndex = (data.currentIndex + i) % data.examList.count
                 let entryDate = Calendar.current.date(byAdding: .second, value: i * intervalSeconds, to: currentDate)!
                 
                 let examInfo = createExamInfo(from: data.examList[examIndex])
                 let entryCarouselData = CarouselWidgetData(
                     examList: data.examList,
-                    currentIndex: examIndex,
+                    currentIndex: examIndex, // Use the actual exam index being displayed
                     totalCount: data.examList.count
                 )
                 
@@ -146,6 +149,10 @@ struct Provider: TimelineProvider {
         NSLog("ExamWidget: App Group ID = group.com.aim.aimNonsul")
         NSLog("ExamWidget: UserDefaults 객체 생성 성공: \(userDefaults != nil ? "true" : "false")")
         
+        // Check current index first for debugging
+        let persistedCurrentIndex = userDefaults?.integer(forKey: "current_index") ?? 0
+        NSLog("ExamWidget: 저장된 current_index: \(persistedCurrentIndex)")
+        
         // Debug: Print all available keys (using NSLog for widget debugging)
         if let userDefaults = userDefaults {
             let allKeys = userDefaults.dictionaryRepresentation()
@@ -171,7 +178,7 @@ struct Provider: TimelineProvider {
         
         if let jsonString = carouselJsonString {
             NSLog("ExamWidget: carousel_data 발견됨, 파싱 시도 중...")
-            if let carouselData = parseCarouselData(jsonString: jsonString) {
+            if let carouselData = parseCarouselData(jsonString: jsonString, userDefaults: userDefaults) {
                 NSLog("ExamWidget: Carousel 데이터 로드 성공: \(carouselData.examList.count)개 시험")
                 return carouselData
             } else {
@@ -252,7 +259,7 @@ struct Provider: TimelineProvider {
         return nil
     }
     
-    private func parseCarouselData(jsonString: String) -> CarouselWidgetData? {
+    private func parseCarouselData(jsonString: String, userDefaults: UserDefaults?) -> CarouselWidgetData? {
         NSLog("ExamWidget: JSON 파싱 시작: \(String(jsonString.prefix(200)))")
         
         guard let jsonData = jsonString.data(using: .utf8) else {
@@ -357,9 +364,16 @@ struct Provider: TimelineProvider {
             )
         }
         
-        let currentIndex = json["currentIndex"] as? Int ?? 0
+        // Use persisted index from UserDefaults instead of JSON currentIndex
+        let persistedIndex = userDefaults?.integer(forKey: "current_index") ?? 0
+        let jsonCurrentIndex = json["currentIndex"] as? Int ?? 0
         let totalCount = json["totalCount"] as? Int ?? examList.count
+        
+        // Prefer persisted index if it's valid, otherwise fall back to JSON index
+        let currentIndex = (persistedIndex < examList.count && persistedIndex >= 0) ? persistedIndex : jsonCurrentIndex
         let validIndex = min(max(0, currentIndex), examList.count - 1)
+        
+        NSLog("ExamWidget: Index selection - persisted: \(persistedIndex), json: \(jsonCurrentIndex), final: \(validIndex)")
         
         NSLog("ExamWidget: 최종 CarouselWidgetData 생성: \(examList.count)개 시험, 현재 인덱스: \(validIndex)")
         
@@ -430,14 +444,15 @@ struct ExamWidgetEntryView : View {
 
     var body: some View {
         // Debug logging for the view
-        NSLog("ExamWidget: 뷰 렌더링 시작")
+        NSLog("ExamWidget: 뷰 렌더링 시작 - 타임스탬프: \(Date())")
         NSLog("ExamWidget: examInfo 존재 여부: \(entry.examInfo != nil ? "true" : "false")")
         NSLog("ExamWidget: carouselData 존재 여부: \(entry.carouselData != nil ? "true" : "false")")
         if let carouselData = entry.carouselData {
             NSLog("ExamWidget: carouselData - \(carouselData.examList.count)개 시험, 현재 인덱스: \(carouselData.currentIndex)")
+            NSLog("ExamWidget: Widget Family: \(family)")
         }
         if let examInfo = entry.examInfo {
-            NSLog("ExamWidget: 렌더링할 시험: \(examInfo.university) - \(examInfo.department)")
+            NSLog("ExamWidget: 렌더링할 시험: \(examInfo.university) - \(examInfo.department) (id: \(examInfo.id))")
         }
         
         return Group {
@@ -556,18 +571,22 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                         // Previous button
                         Button(intent: NavigatePreviousIntent()) {
                             Image(systemName: "chevron.left.circle.fill")
-                                .font(.system(size: 16))
+                                .font(.system(size: 18))
                                 .foregroundColor(primaryColor)
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(.plain)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
                         
                         // Next button
                         Button(intent: NavigateNextIntent()) {
                             Image(systemName: "chevron.right.circle.fill")
-                                .font(.system(size: 16))
+                                .font(.system(size: 18))
                                 .foregroundColor(primaryColor)
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        .buttonStyle(.plain)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
                     }
                 }
             }
@@ -644,18 +663,22 @@ private func accessoryInlineView(examInfo: ExamInfo) -> some View {
                     // Previous button
                     Button(intent: NavigatePreviousIntent()) {
                         Image(systemName: "chevron.left.circle.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 26))
                             .foregroundColor(primaryColor)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(.plain)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
                     
                     // Next button
                     Button(intent: NavigateNextIntent()) {
                         Image(systemName: "chevron.right.circle.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 26))
                             .foregroundColor(primaryColor)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .buttonStyle(.plain)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
                     
                     Spacer()
                 }
