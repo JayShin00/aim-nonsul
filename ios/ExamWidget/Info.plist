@@ -9,12 +9,14 @@
 	</dict>
 	<key>NSExtensionAttributes</key>
 	<dict>
-		<key>WKWidgetFamily</key>
-		<array>
-			<string>accessoryCircular</string>
-			<string>accessoryRectangular</string>
-			<string>accessoryInline</string>
-		</array>
+	<key>WKWidgetFamily</key>
+	<array>
+		<string>systemSmall</string>
+		<string>systemMedium</string>
+		<string>accessoryCircular</string>
+		<string>accessoryRectangular</string>
+		<string>accessoryInline</string>
+	</array>
 	</dict>
 </dict>
 </plist>
