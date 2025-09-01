@@ -7,6 +7,7 @@ class ExamSchedule {
   final String department;
   final DateTime examDateTime;
   final bool isPrimary;
+  final String notification;
 
   ExamSchedule({
     required this.id,
@@ -15,6 +16,7 @@ class ExamSchedule {
     required this.department,
     required this.examDateTime,
     this.isPrimary = false,
+    this.notification = '',
   });
 
   factory ExamSchedule.fromFirestore(DocumentSnapshot doc) {
@@ -26,6 +28,7 @@ class ExamSchedule {
       department: data['department'],
       examDateTime: (data['examDateTime'] as Timestamp).toDate(),
       isPrimary: data['isPrimary'] ?? false,
+      notification: data['notification'] ?? '',
     );
   }
 
@@ -38,6 +41,7 @@ class ExamSchedule {
       'department': department,
       'examDateTime': examDateTime.toIso8601String(),
       'isPrimary': isPrimary,
+      'notification': notification,
     };
   }
 
@@ -50,6 +54,7 @@ class ExamSchedule {
       department: map['department'],
       examDateTime: DateTime.parse(map['examDateTime']),
       isPrimary: map['isPrimary'] ?? false,
+      notification: map['notification'] ?? '',
     );
   }
 }

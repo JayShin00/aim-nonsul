@@ -482,6 +482,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
                                               top: 4,
                                             ),
                                             child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.center,
                                               children: [
                                                 Icon(
                                                   Icons.access_time,
@@ -489,18 +490,20 @@ class _AddExamScreenState extends State<AddExamScreen> {
                                                   color: AppTheme.textSecondary,
                                                 ),
                                                 const SizedBox(width: 3),
-                                                Text(
-                                                  _formatTimeKorean(
-                                                    schedule.examDateTime,
+                                                Expanded(
+                                                  child: Text(
+                                                    _formatTimeKorean(schedule),
+                                                    style: AppTheme.bodyLarge
+                                                        .copyWith(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color:
+                                                              AppTheme
+                                                                  .textSecondary,
+                                                        ),
+                                                    maxLines: 3,
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
-                                                  style: AppTheme.bodyLarge
-                                                      .copyWith(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color:
-                                                            AppTheme
-                                                                .textSecondary,
-                                                      ),
                                                 ),
                                               ],
                                             ),
@@ -547,13 +550,19 @@ class _AddExamScreenState extends State<AddExamScreen> {
     return '${month}월 ${day}일';
   }
 
-  String _formatTimeKorean(DateTime dateTime) {
+  String _formatTimeKorean(ExamSchedule schedule) {
+    final dateTime = schedule.examDateTime;
     final hour = dateTime.hour;
     final minute = dateTime.minute;
 
-    // 시간이 00:00인 경우 (시간 정보가 없는 경우) TBD 표시
+    // 시간이 00:00인 경우 (시간 정보가 없는 경우)
     if (hour == 0 && minute == 0) {
-      return '업데이트 예정';
+      // notification이 있으면 해당 문구를 보여주고, 없으면 "업데이트 예정" 표시
+      if (schedule.notification.isNotEmpty) {
+        return schedule.notification;
+      } else {
+        return '업데이트 예정';
+      }
     }
 
     final period = hour < 12 ? '오전' : '오후';
