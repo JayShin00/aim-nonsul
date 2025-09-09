@@ -6,7 +6,8 @@ import 'package:aim_nonsul/theme/app_theme.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:aim_nonsul/services/notification_service.dart';
 import 'package:aim_nonsul/services/background_notification_service.dart';
-
+import 'package:aim_nonsul/services/in_app_update_service.dart';
+import 'package:upgrader/upgrader.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Firebase 초기화 전에 필수
@@ -57,8 +58,49 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       title: 'AIM 논술 D-Day',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: const HomeScreen(),
+      // 2. home 속성을 UpgradeAlert 위젯으로 변경
+      home: UpgradeAlert(
+        upgrader: Upgrader(
+          countryCode: 'KR',
+        ),
+        child: const InAppUpdateWrapper(child: HomeScreen()), // 인앱 업데이트 래퍼 추가
+      ),
     );
+  }
+}
+
+/// 인앱 업데이트를 처리하는 래퍼 위젯
+class InAppUpdateWrapper extends StatefulWidget {
+  final Widget child;
+  
+  const InAppUpdateWrapper({super.key, required this.child});
+
+  @override
+  State<InAppUpdateWrapper> createState() => _InAppUpdateWrapperState();
+}
+
+class _InAppUpdateWrapperState extends State<InAppUpdateWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    // 앱 시작 시 백그라운드에서 업데이트 확인
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForUpdatesInBackground();
+    });
+  }
+
+  Future<void> _checkForUpdatesInBackground() async {
+    // 앱이 시작된 후 3초 뒤에 업데이트 확인
+    await Future.delayed(const Duration(seconds: 3));
+    
+    if (mounted) {
+      await InAppUpdateService.checkForUpdatesInBackground(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
 

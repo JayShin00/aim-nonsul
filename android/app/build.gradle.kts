@@ -69,4 +69,11 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    
+    // Google Play Core Library for In-App Updates
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
+    
+    // Google Play Services Tasks
+    implementation("com.google.android.gms:play-services-tasks:18.1.0")
 }

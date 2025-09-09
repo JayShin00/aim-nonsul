@@ -9,10 +9,21 @@ import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import com.google.android.play.core.appupdate.AppUpdateManager
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
+import com.google.android.play.core.install.model.InstallStatus
+import com.google.android.gms.tasks.Task
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.aim.aimNonsul/widget"
     private val NOTIFICATION_CHANNEL = "com.aim.aimNonsul/notification"
+    private val IN_APP_UPDATE_CHANNEL = "in_app_update"
+    
+    private lateinit var appUpdateManager: AppUpdateManager
+    private val REQUEST_CODE_UPDATE = 1001
     
     companion object {
         private const val TAG = "MainActivity"
@@ -20,6 +31,9 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        
+        // App Update Manager 초기화
+        appUpdateManager = AppUpdateManagerFactory.create(this)
         
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -36,6 +50,27 @@ class MainActivity : FlutterActivity() {
                 "getAutoScrollEnabled" -> {
                     val enabled = getAutoScrollEnabled(this)
                     result.success(enabled)
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+        
+        // 인앱 업데이트 채널 설정
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, IN_APP_UPDATE_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "isUpdateAvailable" -> {
+                    checkForUpdate(result)
+                }
+                "startFlexibleUpdate" -> {
+                    startFlexibleUpdate(result)
+                }
+                "startImmediateUpdate" -> {
+                    startImmediateUpdate(result)
+                }
+                "completeFlexibleUpdate" -> {
+                    completeFlexibleUpdate(result)
                 }
                 else -> {
                     result.notImplemented()
@@ -109,5 +144,103 @@ class MainActivity : FlutterActivity() {
     private fun getAutoScrollEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
         return prefs.getBoolean("auto_scroll_enabled", true)
+    }
+    
+    // 인앱 업데이트 관련 메서드들
+    private fun checkForUpdate(result: MethodChannel.Result) {
+        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo
+        
+        appUpdateInfoTask.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
+            val isUpdateAvailable = appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+            result.success(isUpdateAvailable)
+        }
+        
+        appUpdateInfoTask.addOnFailureListener { exception: Exception ->
+            Log.e(TAG, "업데이트 확인 실패", exception)
+            result.success(false)
+        }
+    }
+    
+    private fun startFlexibleUpdate(result: MethodChannel.Result) {
+        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo
+        
+        appUpdateInfoTask.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
+                try {
+                    appUpdateManager.startUpdateFlowForResult(
+                        appUpdateInfo,
+                        AppUpdateType.FLEXIBLE,
+                        this,
+                        REQUEST_CODE_UPDATE
+                    )
+                    result.success(true)
+                } catch (e: Exception) {
+                    Log.e(TAG, "유연한 업데이트 시작 실패", e)
+                    result.success(false)
+                }
+            } else {
+                result.success(false)
+            }
+        }
+        
+        appUpdateInfoTask.addOnFailureListener { exception: Exception ->
+            Log.e(TAG, "유연한 업데이트 시작 실패", exception)
+            result.success(false)
+        }
+    }
+    
+    private fun startImmediateUpdate(result: MethodChannel.Result) {
+        val appUpdateInfoTask: Task<AppUpdateInfo> = appUpdateManager.appUpdateInfo
+        
+        appUpdateInfoTask.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
+            if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
+                try {
+                    appUpdateManager.startUpdateFlowForResult(
+                        appUpdateInfo,
+                        AppUpdateType.IMMEDIATE,
+                        this,
+                        REQUEST_CODE_UPDATE
+                    )
+                    result.success(true)
+                } catch (e: Exception) {
+                    Log.e(TAG, "즉시 업데이트 시작 실패", e)
+                    result.success(false)
+                }
+            } else {
+                result.success(false)
+            }
+        }
+        
+        appUpdateInfoTask.addOnFailureListener { exception: Exception ->
+            Log.e(TAG, "즉시 업데이트 시작 실패", exception)
+            result.success(false)
+        }
+    }
+    
+    private fun completeFlexibleUpdate(result: MethodChannel.Result) {
+        appUpdateManager.completeUpdate()
+        result.success(null)
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        
+        // 유연한 업데이트가 완료되었는지 확인
+        appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
+            if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
+                // 업데이트가 다운로드되었음을 사용자에게 알림
+                Log.d(TAG, "업데이트가 다운로드되었습니다. 재시작이 필요합니다.")
+            }
+        }
+    }
+    
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        
+        if (requestCode == REQUEST_CODE_UPDATE) {
+            if (resultCode != RESULT_OK) {
+                Log.d(TAG, "업데이트가 취소되었습니다.")
+            }
+        }
     }
 }
