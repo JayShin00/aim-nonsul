@@ -19,7 +19,7 @@ struct NavigateNextIntent: AppIntent {
         NSLog("NavigateNextIntent: Started execution")
         
         // Update carousel index
-        let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul")
+        let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul.ExamWidget")
         let carouselData = loadCarouselData(from: userDefaults)
         
         if let data = carouselData, !data.examList.isEmpty {
@@ -61,7 +61,7 @@ struct NavigatePreviousIntent: AppIntent {
         NSLog("NavigatePreviousIntent: Started execution")
         
         // Update carousel index
-        let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul")
+        let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul.ExamWidget")
         let carouselData = loadCarouselData(from: userDefaults)
         
         if let data = carouselData, !data.examList.isEmpty {

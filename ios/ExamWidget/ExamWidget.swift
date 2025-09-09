@@ -143,11 +143,17 @@ struct Provider: TimelineProvider {
     
     private func loadCarouselData() -> CarouselWidgetData? {
         // UserDefaults에서 home_widget 데이터 로드
-        let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul")
+        let userDefaults = UserDefaults(suiteName: "group.com.aim.aimNonsul.ExamWidget")
 
         // 디버깅용 로그 (using NSLog for widget debugging)
-        NSLog("ExamWidget: App Group ID = group.com.aim.aimNonsul")
+        NSLog("ExamWidget: App Group ID = group.com.aim.aimNonsul.ExamWidget")
         NSLog("ExamWidget: UserDefaults 객체 생성 성공: \(userDefaults != nil ? "true" : "false")")
+        
+        // App Group 접근 가능 여부 확인
+        if userDefaults == nil {
+            NSLog("ExamWidget: CRITICAL ERROR - App Group 접근 실패! entitlements 확인 필요")
+            return nil
+        }
         
         // Check current index first for debugging
         let persistedCurrentIndex = userDefaults?.integer(forKey: "current_index") ?? 0
