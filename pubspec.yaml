@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.2+3
+version: 1.0.3+4
 
 environment:
   sdk: ^3.7.2
@@ -42,6 +42,7 @@ dependencies:
   google_fonts: ^6.1.0
   url_launcher: ^6.3.1
   flutter_local_notifications: ^17.2.3
+  upgrader: ^11.5.0
 
 dev_dependencies:
   flutter_test:
@@ -100,14 +101,14 @@ flutter_launcher_icons:
   ios: true # iOS 플랫폼에 런처 아이콘 적용 여부
 
   # 기본 아이콘 이미지
-  image_path: "assets/dday_app_logo.png"
+  image_path: "assets/android_app_icon.png"
 
   # 안드로이드 adaptive icon 설정
   adaptive_icon_background: "#FFFFFF" # 배경색 (화이트)
-  adaptive_icon_foreground: "assets/dday_app_logo.png" # 전경 이미지
+  adaptive_icon_foreground: "assets/android_app_icon.png" # 전경 이미지
 
   # 안전 영역을 위한 inset 설정 (기존 16%보다 더 안전하게)
-  adaptive_icon_padding: true"
+  adaptive_icon_padding: true
 
   # 안드로이드 최소 SDK 버전
-  min_sdk_android: 21
+  min_sdk_android: 23

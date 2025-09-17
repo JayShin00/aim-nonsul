@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     
+    <!-- Permission for Google Play In-App Updates -->
+    <uses-permission android:name="com.android.vending.CHECK_LICENSE" />
+    
     <application
         android:label="수능 논술 디데이"
         android:name="${applicationName}"

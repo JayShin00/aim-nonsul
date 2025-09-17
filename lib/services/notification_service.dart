@@ -182,7 +182,7 @@ class NotificationService {
     // Create notification content
     final String title = schedule.isPrimary ? '$dDayText ⭐ ${schedule.university}' : '$dDayText ${schedule.university}';
     final String body = '$cleanDepartment • $formattedDate';
-    final String bigText = '${schedule.university}\\n$cleanDepartment\\n시험일: $formattedDate\\n\\n남은 일수: $dDayText';
+    final String bigText = '${schedule.university}\n$cleanDepartment\n시험일: $formattedDate\n\n남은 일수: $dDayText';
     
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       _channelId,
