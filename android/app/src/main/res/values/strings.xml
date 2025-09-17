@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AIM 논술</string>
+    <string name="widget_description">AIM 논술 D-Day</string>
+    <string name="glance_widget_description">AIM 논술 D-Day (Glance)</string>
+</resources>

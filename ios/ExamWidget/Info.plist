@@ -7,11 +7,12 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
-
 	<key>NSExtensionAttributes</key>
 	<dict>
 	<key>WKWidgetFamily</key>
 	<array>
+		<string>systemSmall</string>
+		<string>systemMedium</string>
 		<string>accessoryCircular</string>
 		<string>accessoryRectangular</string>
 		<string>accessoryInline</string>

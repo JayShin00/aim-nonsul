@@ -62,6 +62,9 @@ def upload_csv_to_firestore(csv_file, collection_name):
                 # 한국시간(KST)으로 변환
                 exam_datetime = kst.localize(exam_datetime)
                 
+                # notification 필드 처리
+                notification_str = row.get('notification', '').strip()
+                
                 # Firestore에 저장할 데이터
                 data = {
                     "id": int(doc_id),
@@ -69,6 +72,7 @@ def upload_csv_to_firestore(csv_file, collection_name):
                     "category": row["category"],
                     "department": row["department"],
                     "examDateTime": exam_datetime,
+                    "notification": notification_str,
                 }
                 
                 existing_docs = db.collection(collection_name).where("id", "==", int(doc_id)).limit(1).get()

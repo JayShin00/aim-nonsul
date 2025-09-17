@@ -1,6 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aim_nonsul/models/exam_schedule.dart';
 import 'package:aim_nonsul/services/widget_service.dart';
+import 'package:aim_nonsul/services/notification_service.dart';
+import 'package:aim_nonsul/services/background_notification_service.dart';
 import 'dart:convert';
 
 class LocalScheduleService {
@@ -150,13 +152,13 @@ class LocalScheduleService {
 
   // 플랫폼별 위젯 업데이트
   Future<void> _updateAllWidgets(List<ExamSchedule> schedules) async {
-    // 모든 플랫폼에서 WidgetService 사용 (수능 포함된 전체 스케줄)
+    print('LocalScheduleService._updateAllWidgets 호출됨: ${schedules.length}개 스케줄');
+    
+    // WidgetService를 통해 통합 위젯 업데이트 (iOS, Android 모두)
     await WidgetService.updateWidget(schedules);
-  }
-
-  // 외부에서 위젯 업데이트 호출용
-  Future<void> updateWidgets(List<ExamSchedule> schedules) async {
-    await _updateAllWidgets(schedules);
+    
+    // 알림 업데이트 (모든 플랫폼)
+    await _updateNotifications();
   }
 
 
@@ -251,5 +253,22 @@ class LocalScheduleService {
   Future<void> setFirstLaunchComplete() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_firstLaunchKey, false);
+  }
+
+  // 알림 업데이트
+  Future<void> _updateNotifications() async {
+    try {
+      final notificationService = NotificationService();
+      final isNotificationEnabled = await notificationService.areNotificationsEnabled();
+      
+      if (isNotificationEnabled) {
+        // 즉시 업데이트
+        await notificationService.showDDayNotification();
+        // 백그라운드 업데이트 트리거
+        BackgroundNotificationService.triggerUpdate();
+      }
+    } catch (e) {
+      print('알림 업데이트 실패: $e');
+    }
   }
 }

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:aim_nonsul/models/exam_schedule.dart';
 import 'package:aim_nonsul/screens/add_exam_screen.dart';
 import 'package:aim_nonsul/services/local_schedule_service.dart';
+import 'package:aim_nonsul/services/widget_service.dart';
+import 'package:aim_nonsul/services/notification_service.dart';
+import 'package:aim_nonsul/services/widget_auto_scroll_service.dart';
 import 'package:aim_nonsul/theme/app_theme.dart';
 import 'package:aim_nonsul/utils/conflict_util.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,13 +21,45 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ExamSchedule> selectedSchedules = [];
   List<ExamSchedule> conflictingSchedules = [];
   final LocalScheduleService _localService = LocalScheduleService();
+  final NotificationService _notificationService = NotificationService();
   bool _isNoticeExpanded = false;
+  bool _isNotificationEnabled = false;
+  bool _isAutoScrollEnabled = true;
 
   @override
   void initState() {
     super.initState();
-    loadSelected();
-    _checkFirstLaunch();
+    _initializeAsync();
+  }
+
+  Future<void> _initializeAsync() async {
+    try {
+      await loadSelected();
+      print('loadSelected 완료');
+    } catch (e) {
+      print('loadSelected 실패: $e');
+    }
+
+    try {
+      await _checkFirstLaunch();
+      print('_checkFirstLaunch 완료');
+    } catch (e) {
+      print('_checkFirstLaunch 실패: $e');
+    }
+
+    try {
+      await _loadNotificationSettings();
+      print('_loadNotificationSettings 완료');
+    } catch (e) {
+      print('_loadNotificationSettings 실패: $e');
+    }
+
+    try {
+      await _loadAutoScrollSettings();
+      print('_loadAutoScrollSettings 완료');
+    } catch (e) {
+      print('_loadAutoScrollSettings 실패: $e');
+    }
   }
 
   Future<void> _checkFirstLaunch() async {
@@ -33,6 +68,90 @@ class _HomeScreenState extends State<HomeScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showDisclaimerDialog();
       });
+    }
+  }
+
+  Future<void> _loadNotificationSettings() async {
+    final isEnabled = await _notificationService.areNotificationsEnabled();
+    setState(() {
+      _isNotificationEnabled = isEnabled;
+    });
+  }
+
+  Future<void> _loadAutoScrollSettings() async {
+    final isEnabled = await WidgetAutoScrollService.getAutoScrollEnabled();
+    setState(() {
+      _isAutoScrollEnabled = isEnabled;
+    });
+  }
+
+  Future<void> _toggleNotifications() async {
+    try {
+      if (!_isNotificationEnabled) {
+        // Request permissions when enabling
+        final hasPermission = await _notificationService.requestPermissions();
+        if (!hasPermission) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('알림 권한이 필요합니다. 설정에서 권한을 허용해주세요.')),
+          );
+          return;
+        }
+      }
+
+      final newState = !_isNotificationEnabled;
+      await _notificationService.setNotificationsEnabled(newState);
+      
+      // Enhanced iOS notification with Live Activity support
+      if (newState && selectedSchedules.isNotEmpty) {
+        await _notificationService.showIOSEnhancedNotification(selectedSchedules);
+        
+        // Check if Live Activities are available and show info
+        final isLiveActivityAvailable = await _notificationService.areLiveActivitiesAvailable();
+        if (isLiveActivityAvailable) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('알림 및 라이브 액티비티가 활성화되었습니다! 잠금 화면에서 D-Day를 확인하세요.'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+      
+      setState(() {
+        _isNotificationEnabled = newState;
+      });
+
+      if (!newState) {
+        // Stop Live Activity when disabling notifications
+        await _notificationService.stopLiveActivity();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('알림이 비활성화되었습니다')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('알림 설정 중 오류가 발생했습니다')),
+      );
+    }
+  }
+
+  Future<void> _toggleAutoScroll() async {
+    try {
+      final newState = !_isAutoScrollEnabled;
+      await WidgetAutoScrollService.setAutoScrollEnabled(newState);
+      setState(() {
+        _isAutoScrollEnabled = newState;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(newState ? '위젯 자동 스크롤이 활성화되었습니다' : '위젯 자동 스크롤이 비활성화되었습니다'),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('자동 스크롤 설정 중 오류가 발생했습니다')),
+      );
     }
   }
 
@@ -149,8 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> loadSelected() async {
-    final allSchedules =
-    await _localService.loadSelectedSchedules(); // 수능 포함된 전체 스케줄
+    final allSchedules = await _localService.loadSelectedSchedules();
 
     final conflicts = getConflictingSchedulesInList(allSchedules);
     setState(() {
@@ -158,8 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
       conflictingSchedules = conflicts;
     });
 
-    // 위젯 업데이트 (수능 포함된 전체 스케줄로)
-    await _localService.updateWidgets(allSchedules);
+    await WidgetService.updateWidget(allSchedules); // 위젯 업데이트는 원래 리스트만 사용
   }
 
   Future<void> removeSelectedSchedule(int id) async {
@@ -201,33 +318,51 @@ class _HomeScreenState extends State<HomeScreen> {
               SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: "수능・논술 ",
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 24,
-                              color: AppTheme.textPrimary,
-                              letterSpacing: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            TextSpan(
+                              text: "수능・논술 ",
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 24,
+                                color: AppTheme.textPrimary,
+                                letterSpacing: 0,
+                              ),
                             ),
-                          ),
-                          // 영어 + D-Day 부분 (기본 굵기)
-                          TextSpan(
-                            text: "D-Day",
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w700, // 기본 굵기
-                              fontSize: 24,
-                              color: AppTheme.textPrimary,
-                              letterSpacing: -0.5,
+                            // 영어 + D-Day 부분 (기본 굵기)
+                            TextSpan(
+                              text: "D-Day",
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w700, // 기본 굵기
+                                fontSize: 24,
+                                color: AppTheme.textPrimary,
+                                letterSpacing: -0.5,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
+                      // 알림 토글 버튼
+                      IconButton(
+                        onPressed: _toggleNotifications,
+                        icon: Icon(
+                          _isNotificationEnabled 
+                              ? Icons.notifications_active
+                              : Icons.notifications_off,
+                          color: _isNotificationEnabled 
+                              ? AppTheme.primaryColor
+                              : AppTheme.textLight,
+                          size: 28,
+                        ),
+                        tooltip: _isNotificationEnabled 
+                            ? '알림 비활성화'
+                            : '알림 활성화',
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -347,72 +482,141 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBanner() {
-    return InkWell(
-      onTap: () => _openExternalUrl('https://aimscore.ai'),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 태블릿 가로 모드 감지 (화면 너비가 800 이상이고 가로 비율이 1.5 이상)
+        final isTabletLandscape = constraints.maxWidth > 800 && 
+                                 MediaQuery.of(context).size.width / MediaQuery.of(context).size.height > 1.5;
+        
+        // 태블릿 가로 모드일 때 배너 크기 축소
+        final bannerHeight = isTabletLandscape ? 120.0 : null;
+        
+        return InkWell(
+          onTap: () => _openExternalUrl('https://m.site.naver.com/1PeaL'),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+          child: Container(
+            height: bannerHeight,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  spreadRadius: 1,
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: AspectRatio(
-          aspectRatio: 1080 / 314,
-          child: Image.asset(
-            'assets/aim_banner.png',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFF7F7F8),
-                      Color(0xFFEDE7EA),
-                    ],
+            clipBehavior: Clip.antiAlias,
+            child: isTabletLandscape 
+              ? Container(
+                  width: double.infinity,
+                  height: bannerHeight,
+                  color: Colors.white,
+                  child: Image.asset(
+                    'assets/aim_banner.png',
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    height: bannerHeight,
+                    errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: bannerHeight,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFF7F7F8),
+                            Color(0xFFEDE7EA),
+                          ],
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      alignment: Alignment.centerRight,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '논술 보러 갈까? 말까?',
+                            style: AppTheme.headingSmall.copyWith(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textPrimary,
+                            ),
+                            textAlign: TextAlign.right,
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            '나의 9월 모의고사 성적으로 바로 알아보기',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                            textAlign: TextAlign.right,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  ),
+                )
+              : AspectRatio(
+                  aspectRatio: 1080 / 314,
+                  child: Container(
+                    color: Colors.white,
+                    child: Image.asset(
+                      'assets/aim_banner.png',
+                      fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFFF7F7F8),
+                              Color(0xFFEDE7EA),
+                            ],
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        alignment: Alignment.centerRight,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '논술 보러 갈까? 말까?',
+                              style: AppTheme.headingSmall.copyWith(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textPrimary,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              '나의 9월 모의고사 성적으로 바로 알아보기',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black87,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    ),
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                alignment: Alignment.centerRight,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '논술 보러 갈까? 말까?',
-                      style: AppTheme.headingSmall.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textPrimary,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '나의 9월 모의고사 성적으로 바로 알아보기',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ],
-                ),
-              );
-            },
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
