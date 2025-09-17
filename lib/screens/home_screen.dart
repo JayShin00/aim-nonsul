@@ -29,10 +29,37 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    loadSelected();
-    _checkFirstLaunch();
-    _loadNotificationSettings();
-    _loadAutoScrollSettings();
+    _initializeAsync();
+  }
+
+  Future<void> _initializeAsync() async {
+    try {
+      await loadSelected();
+      print('loadSelected 완료');
+    } catch (e) {
+      print('loadSelected 실패: $e');
+    }
+
+    try {
+      await _checkFirstLaunch();
+      print('_checkFirstLaunch 완료');
+    } catch (e) {
+      print('_checkFirstLaunch 실패: $e');
+    }
+
+    try {
+      await _loadNotificationSettings();
+      print('_loadNotificationSettings 완료');
+    } catch (e) {
+      print('_loadNotificationSettings 실패: $e');
+    }
+
+    try {
+      await _loadAutoScrollSettings();
+      print('_loadAutoScrollSettings 완료');
+    } catch (e) {
+      print('_loadAutoScrollSettings 실패: $e');
+    }
   }
 
   Future<void> _checkFirstLaunch() async {
@@ -455,72 +482,141 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBanner() {
-    return InkWell(
-      onTap: () => _openExternalUrl('https://m.site.naver.com/1PeaL'),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 태블릿 가로 모드 감지 (화면 너비가 800 이상이고 가로 비율이 1.5 이상)
+        final isTabletLandscape = constraints.maxWidth > 800 && 
+                                 MediaQuery.of(context).size.width / MediaQuery.of(context).size.height > 1.5;
+        
+        // 태블릿 가로 모드일 때 배너 크기 축소
+        final bannerHeight = isTabletLandscape ? 120.0 : null;
+        
+        return InkWell(
+          onTap: () => _openExternalUrl('https://m.site.naver.com/1PeaL'),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withValues(alpha: 0.1),
-              spreadRadius: 1,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+          child: Container(
+            height: bannerHeight,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  spreadRadius: 1,
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: AspectRatio(
-          aspectRatio: 1080 / 314,
-          child: Image.asset(
-            'assets/aim_banner.png',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFF7F7F8),
-                      Color(0xFFEDE7EA),
-                    ],
+            clipBehavior: Clip.antiAlias,
+            child: isTabletLandscape 
+              ? Container(
+                  width: double.infinity,
+                  height: bannerHeight,
+                  color: Colors.white,
+                  child: Image.asset(
+                    'assets/aim_banner.png',
+                    fit: BoxFit.contain,
+                    width: double.infinity,
+                    height: bannerHeight,
+                    errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: bannerHeight,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFF7F7F8),
+                            Color(0xFFEDE7EA),
+                          ],
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      alignment: Alignment.centerRight,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '논술 보러 갈까? 말까?',
+                            style: AppTheme.headingSmall.copyWith(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textPrimary,
+                            ),
+                            textAlign: TextAlign.right,
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            '나의 9월 모의고사 성적으로 바로 알아보기',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                            textAlign: TextAlign.right,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  ),
+                )
+              : AspectRatio(
+                  aspectRatio: 1080 / 314,
+                  child: Container(
+                    color: Colors.white,
+                    child: Image.asset(
+                      'assets/aim_banner.png',
+                      fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFFF7F7F8),
+                              Color(0xFFEDE7EA),
+                            ],
+                          ),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        alignment: Alignment.centerRight,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '논술 보러 갈까? 말까?',
+                              style: AppTheme.headingSmall.copyWith(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textPrimary,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              '나의 9월 모의고사 성적으로 바로 알아보기',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black87,
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    ),
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                alignment: Alignment.centerRight,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '논술 보러 갈까? 말까?',
-                      style: AppTheme.headingSmall.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.textPrimary,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '나의 9월 모의고사 성적으로 바로 알아보기',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ],
-                ),
-              );
-            },
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 

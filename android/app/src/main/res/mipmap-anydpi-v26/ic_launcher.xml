@@ -3,7 +3,10 @@
   <background android:drawable="@color/ic_launcher_background"/>
   <foreground>
       <inset
-          android:drawable="@drawable/dday_app_logo"
-          android:inset="27%" />
+          android:drawable="@drawable/ic_launcher_foreground"
+          android:inset="20%"
+          android:insetLeft="22%"
+          android:insetRight="18%"
+          />
   </foreground>
 </adaptive-icon>
