@@ -4,7 +4,7 @@ College Scholastic Ability Test (CSAT) and Essay D-Day App
 ## Branch Strategy
 Production branch- main
 
-Latest update branch- feat/#2-first-update
+Latest update branch- ios-widget branch
 
 ## Technology Stack
 Framework: Flutter 3.29.2, Dart 3.7.2, Material Design
